@@ -13,139 +13,118 @@ options.add_experimental_option('useAutomationExtension', False)
 
 browser = webdriver.Chrome(options=options)
 browser.get("https://web.whatsapp.com/")
-wait = WebDriverWait(browser, timeout=30)
-sleep(10)
+wait = WebDriverWait(browser, timeout=10)
+sleep(5)
 
-log_in_with_phone_number_element = wait.until(
+def select_element(xpath):
+    return wait.until(
     EC.presence_of_element_located(
-        (By.XPATH, "//div[contains(text(), 'Log in with phone number')]")
+        (By.XPATH, xpath)
         )
     )
-browser.execute_script("arguments[0].scrollIntoView(true);", log_in_with_phone_number_element)
-log_in_with_phone_number_element.click()
-sleep(10)
 
-
-country_dropdown_element = wait.until(
-    EC.presence_of_element_located(
-        (By.XPATH, "//button[.//span[contains(@data-icon, 'chevron')]]")
+def select_elements(xpath):
+    return wait.until(
+        EC.presence_of_all_elements_located(
+            (By.XPATH, xpath)
         )
     )
-browser.execute_script("arguments[0].scrollIntoView(true);", country_dropdown_element)
-country_dropdown_element.click()
+
+def select_clickable_element(xpath):
+    element = wait.until(
+        EC.element_to_be_clickable(
+            (By.XPATH,  xpath)
+        )
+    )
+    browser.execute_script("arguments[0].scrollIntoView(true);", element)
+    element.click()
+    sleep(5)
+    return
+
+def click(element):
+    browser.execute_script("arguments[0].scrollIntoView(true);", element)
+    element.click()
+    sleep(5)
+    return
+
+def type(xpath, value):
+    element = wait.until(
+        EC.presence_of_all_elements_located(
+            (By.XPATH, xpath)
+        )
+    )
+    element.clear()
+    for letter in value:
+        element.send_keys(letter)
+        sleep(0.4)
+    sleep(5)
+    return
+
+def main():
+    pass
+
+log_in_with_phone_number_element = select_clickable_element("//div[contains(text(), 'Log in with phone number')]")
+# click(log_in_with_phone_number_element)
+
+country_dropdown_element = select_clickable_element("//button[.//span[contains(@data-icon, 'chevron')]]")
+# click(country_dropdown_element)
 
 country = 'Nigeria'
 
-country_search_element = wait.until(
-    EC.presence_of_element_located(
-        (By.XPATH, "//p[contains(@class, 'selectable-text copyable-text')]")
-    )
-)
-country_search_element.clear()
-country_search_element.send_keys(country)
-sleep(10)
+# country_search_element = select_element( "//p[contains(@class, 'selectable-text copyable-text')]")
+type("//p[contains(@class, 'selectable-text copyable-text')]", country)
 
-country_element = wait.until(
-    EC.presence_of_all_elements_located(
-        (By.XPATH, "//button[contains(@aria-label, 'Selected country:')]")
-    )
-)[0]
-browser.execute_script("arguments[0].scrollIntoView(true);", country_element)
-country_element.click()
-sleep(10)
+country_element = select_clickable_element( "(//button[contains(@aria-label, 'Selected country:')])[1]")
+# click(country_element) #it used select_elements
 
 phone_number = '8103882179'
-log_in_with_phone_number_element = wait.until(
-    EC.presence_of_element_located(
-        (By.XPATH, "//input[contains(@aria-label, 'phone number')]")
-    )
-)
-log_in_with_phone_number_element.clear()
-log_in_with_phone_number_element.send_keys(phone_number)
-sleep(10)
+# phone_number_element = select_element( "//input[contains(@aria-label, 'phone number')]")
+type("//input[contains(@aria-label, 'phone number')]", phone_number)
 
-next_element = wait.until(
-    EC.presence_of_all_elements_located(
-        (By.XPATH, "//button[.//div[contains(text(),'Next')]]")
-    )
-)[0]
-browser.execute_script("arguments[0].scrollIntoView(true);", next_element)
-next_element.click()
-sleep(10)
+next_element =select_clickable_element("(//button[.//div[contains(text(),'Next')]])[1]")
+# click(next_element) #it used select_elements
 
-link_code_element = wait.until(
-    EC.presence_of_element_located(
-        (By.XPATH, "(//div[contains(@aria-details, 'device-phone-number-code-screen')])[1]")
-    )
-)
+
+link_code_element = select_element("(//div[contains(@aria-details, 'device-phone-number-code-screen')])[1]")
 wait.until(lambda d: link_code_element.get_attribute('data-link-code') is not None)
-link_code = link_code_element.get_attribute('data-link-code').strip(',')
+link_code = link_code_element.get_attribute('data-link-code').replace(',', '').strip()
 print("Link Code:", link_code)
 
 
 try:
-    contiune_element = wait.until(
-        EC.presence_of_element_located(
-            (By.XPATH, "//button[.//div[contains(text(), 'Continue')]]")
-        )
-    )
-    browser.execute_script("arguments[0].scrollIntoView(true);", contiune_element)
-    contiune_element.click()
-    sleep(10)
+    contiune_element = select_clickable_element("//button[.//div[contains(text(), 'Continue')]]")
+    # click(contiune_element)
 finally:
-    status_element = wait.until(
-        EC.element_to_be_clickable(
-            (By.XPATH,  "(//button[contains(@aria-label,'Status')])[1]")
-        )
-    )
-    browser.execute_script("arguments[0].scrollIntoView(true);", status_element)
-    status_element.click()
-    sleep(10)
+    status_element = select_clickable_element("(//button[contains(@aria-label,'Status')])[1]")
+    # click(status_element)
 
-    add_status_element = wait.until(
-        EC.element_to_be_clickable(
-            (By.XPATH,  "(//button[contains(@aria-label,'Status')])[2]")
-        )
-    )
-    browser.execute_script("arguments[0].scrollIntoView(true);", add_status_element)
-    add_status_element.click()
-    sleep(10)
+    add_status_element = select_clickable_element("(//button[contains(@aria-label,'Status')])[2]")
+    # click(add_status_element)
 
-    update_status_ul_element = wait.until(
-        EC.presence_of_all_elements_located(
-            (By.XPATH, "//div[contains(@role, 'application')]//ul")
-        )
-    )
+    update_status_ul_element = select_elements("//div[contains(@role, 'application')]//ul")
+
     image_element = update_status_ul_element[0]
-    text_element = update_status_ul_element[1]
-    browser.execute_script("arguments[0].scrollIntoView(true);", image_element)
-    image_element.click()
+    # text_element = update_status_ul_element[1]
+
+    click(image_element)
 
     file_path = r"C:\Users\HP\Desktop\Hotel\Juel\media\photos\2023\11\27\about4.jpg"
     pyautogui.write(file_path)
     pyautogui.press("enter")
     caption = 'room 1'
-    add_text_element = wait.until(
-        EC.presence_of_element_located(
-            (By.XPATH, "//div[@aria-label='Add a caption']//p[contains(@class,'selectable-text copyable-text')]")
-        )
-    )
-    add_text_element.clear()
-    add_text_element.send_keys(caption)
+    # add_text_element = select_element("//div[@aria-label='Add a caption']//p[contains(@class,'selectable-text copyable-text')]")
+    type("//div[@aria-label='Add a caption']//p[contains(@class,'selectable-text copyable-text')]", caption)
 
-    send_element = wait.until(
-        EC.element_to_be_clickable(
-            (By.XPATH,  "//div[contains(@aria-label, 'Send')]")
-        )
-    )
+    add_file_element = select_clickable_element("//button[contains(@title, 'Add file')]")
+    # click(add_file_element)
 
-    add_file_element = wait.until(
-        EC.presence_of_element_located(
-            (By.XPATH, "//button[contains(@title, 'Add file')]")
-        )
-    )
+    file_path = r"C:\Users\HP\Desktop\Hotel\Juel\media\photos\2023\11\27\about4.jpg"
+    pyautogui.write(file_path)
+    pyautogui.press("enter")
+    caption = 'room 2'
+    # add_text_element = select_element("//div[@aria-label='Add a caption']//p[contains(@class,'selectable-text copyable-text')]")
+    type("//div[@aria-label='Add a caption']//p[contains(@class,'selectable-text copyable-text')]", caption)
 
-    browser.execute_script("arguments[0].scrollIntoView(true);", send_element)
-    send_element.click()
-    sleep(10)
+    send_element = select_clickable_element("//div[contains(@aria-label, 'Send')]")
+    click(send_element)
 input()
