@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     database_password: str
     database_port: int
     database_name: str
+    access_token: str
+    phone_number_id: str
+    verify_token: str
+    app_secret: str
 
     class Config:
         env_file = ".env"
