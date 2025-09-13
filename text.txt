@@ -1,0 +1,93 @@
+Thanks for sharing your commands. Let's go through them one by one, correct the syntax, and explain what's going wrong — especially with the final command causing the error.
+
+---
+
+### 🔢 Here's what you ran:
+
+```bash
+openssl genrsa -des3 -out private.pem 2048
+openssl rsa -in private.pem -outform PEM -pubout -out public.pem
+openssl x509 -pubkey -noout -in private.pem > public.pem
+```
+
+---
+
+### 🧨 The problem:
+
+The **third command** is incorrect:
+
+```bash
+openssl x509 -pubkey -noout -in private.pem > public.pem
+```
+
+You're trying to read a **certificate** using a file (`private.pem`) that contains a **private key**, not a certificate. That’s why you're seeing this error:
+
+> `ossl_store_handle_load_result:unsupported`
+
+---
+
+### ✅ What You Should Do
+
+Here’s the corrected and proper workflow if you’re just trying to generate a **private/public key pair**:
+
+---
+
+### ✔ Step-by-step:
+
+#### 1. Generate a private RSA key:
+
+```bash
+openssl genrsa -out private.pem 2048
+```
+
+*(or use `-des3` if you want to password-protect it:)*
+
+```bash
+openssl genrsa -des3 -out private.pem 2048
+```
+
+#### 2. Extract the public key:
+
+```bash
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+✔️ This is the correct way to get the public key from a private key.
+
+---
+
+### ⛔️ Don’t use this command in your case:
+
+```bash
+openssl x509 -pubkey -noout -in private.pem
+```
+
+Because `x509` expects an X.509 certificate, not a private key.
+
+---
+
+### 🧠 Extra: Want to create a self-signed certificate?
+
+If you're aiming to create a **self-signed certificate** (e.g., for local development):
+
+```bash
+openssl req -new -x509 -key private.pem -out cert.pem -days 365
+```
+
+Then you *could* extract the public key from that certificate:
+
+```bash
+openssl x509 -pubkey -noout -in cert.pem
+```
+
+---
+
+### ✅ Summary
+
+| Action                               | Correct Command                                       |
+| ------------------------------------ | ----------------------------------------------------- |
+| Generate private key                 | `openssl genrsa -out private.pem 2048`                |
+| Extract public key                   | `openssl rsa -in private.pem -pubout -out public.pem` |
+| 🔥 **Don’t use** x509 on private key | `openssl x509 -in private.pem ...` → ❌ wrong usage    |
+
+Let me know your actual goal (key generation, cert creation, signing, etc.), and I can tailor a more exact guide for you.

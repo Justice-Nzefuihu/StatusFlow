@@ -1,4 +1,4 @@
-from pydantic import BaseModel, constr, root_validator
+from pydantic import BaseModel, constr
 from datetime import datetime, time
 from typing import List
 from .model import ScheduleEnum

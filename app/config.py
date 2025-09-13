@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     phone_number_id: str
     verify_token: str
     app_secret: str
+    google_scopes: str
+    service_account_file: str
+    fernet_key: str
 
     class Config:
         env_file = ".env"

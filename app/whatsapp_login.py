@@ -17,13 +17,13 @@ def phone_number_login(wait, browser, phone_number, country):
     input("After linking device, press Enter...")
     sleep(30)
 
-def login_or_restore(user_id, phone_number, country):
-    browser, wait = launch_whatsapp(str(user_id))
+def login_or_restore(phone_number, country, PROFILES_DIR):
+    browser, wait = launch_whatsapp(str(PROFILES_DIR))
     browser.get("https://web.whatsapp.com/")
     try:
         select_clickable_element(wait, browser, "//button[.//div[contains(text(), 'Continue')]]")
     except TimeoutException:
-        pass
+        pass 
     try:
         select_clickable_element(wait, browser, "(//button[contains(@aria-label,'Status')])[1]")
     except TimeoutException:
@@ -31,11 +31,11 @@ def login_or_restore(user_id, phone_number, country):
         try:
             ok_element = select_clickable_element("//button[.//div[contains(text(), 'OK')]]")
             if ok_element:
-                login_or_restore(user_id, phone_number, country)
+                login_or_restore(phone_number, country, PROFILES_DIR)
         except TimeoutException:
             pass
 
-    sleep(60)
+    sleep(120)
     browser.quit()
 
 def get_code(wait, browser):

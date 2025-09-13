@@ -3,8 +3,8 @@ import pyautogui
 from whatsapp_utils import select_clickable_element, type_text
 from time import sleep
 
-def send_status_texts(user_id, write_ups):
-    browser, wait = launch_whatsapp(str(user_id))
+def send_status_texts(write_ups, PROFILE_DIR):
+    browser, wait = launch_whatsapp(str( PROFILE_DIR))
     select_clickable_element(wait, browser, "(//button[contains(@aria-label,'Status')])[2]")
     select_clickable_element(wait, browser, "//div[contains(@role, 'application')]//ul//li[.//span[contains(text(), 'Text')]]")
 
@@ -16,11 +16,11 @@ def send_status_texts(user_id, write_ups):
             select_clickable_element(wait, browser, "(//button[contains(@aria-label,'Status')])[2]")
             select_clickable_element(wait, browser, "//div[contains(@role, 'application')]//ul//li[.//span[contains(text(), 'Text')]]")
     
-    sleep(60)
+    sleep(120)
     browser.quit()
         
-def send_status_images(user_id, images):
-    browser, wait = launch_whatsapp(str(user_id))
+def send_status_images(images,  PROFILE_DIR):
+    browser, wait = launch_whatsapp(str( PROFILE_DIR))
     select_clickable_element(wait, browser, "(//button[contains(@aria-label,'Status')])[2]")
     select_clickable_element(wait, browser, "//div[contains(@role, 'application')]//ul//li[.//span[contains(text(), 'video')]]")
 
@@ -36,5 +36,5 @@ def send_status_images(user_id, images):
     
     select_clickable_element(wait, browser, "//div[contains(@aria-label, 'Send')]")
 
-    sleep(60)
+    sleep(120)
     browser.quit()

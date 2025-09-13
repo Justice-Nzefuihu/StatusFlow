@@ -5,7 +5,7 @@ ACCESS_TOKEN = setting.access_token
 PHONE_NUMBER_ID = setting.phone_number_id
 RECIPIENT_PHONE = "2349043262304"
 
-url = f"https://graph.facebook.com/v22.0/753045567890417/messages"
+url = "https://graph.facebook.com/v22.0/753045567890417/messages"
 
 headers = {
     "Authorization": f"Bearer {ACCESS_TOKEN}",
@@ -21,12 +21,12 @@ data = {
     }
 }
 
-try:
-    response = requests.post(url, headers=headers, json=data)
-    response_data = response.json()
-    print(response.status_code, response.json())
-except Exception as e:
-    print(f"Error occurred: {e}")
+# try:
+#     response = requests.post(url, headers=headers, json=data)
+#     response_data = response.json()
+#     print(response.status_code, response.json())
+# except Exception as e:
+#     print(f"Error occurred: {e}")
 
 # { 
 #     "messaging_product": "whatsapp", 

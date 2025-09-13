@@ -4,11 +4,12 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import (
     Mapped, mapped_column, relationship, DeclarativeBase
 )
+from uuid import UUID, uuid4
 from enum import Enum
 from typing import List
 
 class Base(DeclarativeBase):
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
 
 
 
@@ -23,7 +24,8 @@ class UserDB(Base):
     created_at: Mapped[datetime] = mapped_column(
         default=func.now()
     )
-    
+    main_folder_id: Mapped[int | None] = mapped_column(unique=True, nullable=True)
+    sequence: Mapped[int] = mapped_column(default=0, nullable=True)
     statuses: Mapped[List["StatusDB"]] = relationship(
         "StatusDB", back_populates="user", cascade="all, delete"
     )
@@ -55,6 +57,5 @@ class StatusDB(Base):
     )
     schedule: Mapped[ScheduleEnum] = mapped_column(String(20), default=ScheduleEnum.EVERYDAY.value)
     schedule_time: Mapped[time] = mapped_column(Time(), default=time(7, 0))
-    sequence: Mapped[int] = mapped_column()
 
     user: Mapped[UserDB] = relationship(back_populates="statuses")
