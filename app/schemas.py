@@ -2,6 +2,7 @@ from pydantic import BaseModel, constr
 from datetime import datetime, time
 from typing import List
 from .model import ScheduleEnum
+from uuid import UUID
 
 
 class UserBase(BaseModel):
@@ -12,13 +13,13 @@ class UserCreate(UserBase):
     pass
 
 class User(UserBase):
-    id: int
+    id: UUID
     created_at: datetime
     status: List["Status"] = []
     
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 
@@ -28,15 +29,15 @@ class Status(BaseModel):
     image_path: str | None = None
     schedule: ScheduleEnum
     time: time
-    id: int
-    user_id: int
+    id: UUID
+    user_id: UUID
     is_upload: bool
     created_at: datetime
     sequuence: int
     user: User
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 User.update_forward_refs()

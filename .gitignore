@@ -4,5 +4,8 @@ __pycache__
 profiles/
 media/
 justice/
-service_account.json
+credentials.json
 secret/
+token.json
+token.file
+test.py

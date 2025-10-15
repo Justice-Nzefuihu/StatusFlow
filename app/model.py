@@ -24,6 +24,7 @@ class UserDB(Base):
     created_at: Mapped[datetime] = mapped_column(
         default=func.now()
     )
+    login_status: Mapped[bool] = mapped_column(default=False)
     main_folder_id: Mapped[int | None] = mapped_column(unique=True, nullable=True)
     sequence: Mapped[int] = mapped_column(default=0, nullable=True)
     statuses: Mapped[List["StatusDB"]] = relationship(
