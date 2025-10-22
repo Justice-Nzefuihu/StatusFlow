@@ -1,9 +1,12 @@
 import logging
+import pathlib
+from uuid import UUID
 from time import sleep
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from .whatsapp_utils import select_clickable_element, type_text, select_element
 from .main import launch_whatsapp
 from .login_status import get_login_status, change_login_status
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ def phone_number_login(wait, browser, phone_number: str, country: str):
         raise
 
 
-def login_or_restore(phone_number: str, country: str, PROFILES_DIR):
+def login_or_restore(phone_number: str, country: str, PROFILES_DIR, user_id: UUID = 0, for_status: bool = False):
     logger.info("Launching WhatsApp Web for %s (%s)", phone_number, country)
     try:
         browser, wait = launch_whatsapp(str(PROFILES_DIR))
@@ -52,17 +55,31 @@ def login_or_restore(phone_number: str, country: str, PROFILES_DIR):
             changed = change_login_status(phone_number, country)
             if changed:
                 phone_number_login(wait, browser, phone_number, country)
+                if for_status and user_id != 0:
+                   
+                    from .tasks import upload_profile
+
+                    MAIN_DIR = pathlib.Path(PROFILES_DIR).resolve().parent
+
+                    if MAIN_DIR.exists():
+                        upload_profile.delay(str(MAIN_DIR), user_id=user_id, for_status=for_status)
+                        logger.info(f"Queued profile upload for {MAIN_DIR}")
+                    else:
+                        logger.error(f"Upload directory not found: {MAIN_DIR}")
+
             else:
                 raise Exception("Unable to change login status or detect new user")
         except Exception as e:
             logger.error("Failed during login_or_restore for %s (%s): %s", phone_number, country, e, exc_info=True)
             browser.quit()
             raise
-
+    
     logger.info("Waiting to complete login for %s (%s)...", phone_number, country)
     sleep(120)
-    browser.quit()
-    logger.info("Closed browser for %s (%s)", phone_number, country)
+    
+    if not for_status:
+        browser.quit()
+        logger.info("Closed browser for %s (%s)", phone_number, country)
 
     return browser, wait
 
@@ -72,28 +89,53 @@ def get_code(wait, browser, phone_number: str, country: str):
     try:
         select_clickable_element(wait, browser, "(//button[.//div[contains(text(),'Next')]])[1]")
 
-        link_code_element = select_element(wait, "(//div[contains(@aria-details, 'device-phone-number-code-screen')])[1]")
-        wait.until(lambda d: link_code_element.get_attribute('data-link-code') is not None)
-        link_code = link_code_element.get_attribute('data-link-code').replace(',', '').strip()
-        logger.info("Link code retrieved for %s (%s): %s", phone_number, country, link_code)
+        for num in range(60):  # wait up to 5 minutes (60 × 5s)
+            try:
+                link_code_element = select_element(wait, "(//div[contains(@aria-details, 'device-phone-number-code-screen')])[1]")
+                wait.until(lambda d: link_code_element.get_attribute('data-link-code') is not None)
+                link_code = link_code_element.get_attribute('data-link-code').replace(',', '').strip()
+                logger.info("Link code retrieved for %s (%s): %s", phone_number, country, link_code)
+            except TimeoutException:
+                logger.debug("Link code not yet available for %s (%s)", phone_number, country)
 
-        for num in range(60):  # wait up to 60 × 5s = 5 minutes
+            # Check if login is confirmed
             if get_login_status(phone_number, country):
                 logger.info("Login confirmed for %s (%s)", phone_number, country)
                 break
+
+            # Retry if WhatsApp shows “Something went wrong”
             try:
-                select_clickable_element(wait, browser, "//div[contains(@aria-label,'Something went wrong Please try again or link with the QR code.')]//button")
+                select_clickable_element(
+                    wait, browser,
+                    "//div[contains(@aria-label,'Something went wrong Please try again or link with the QR code.')]//button"
+                )
                 logger.warning("Retrying get_code due to error prompt for %s (%s)", phone_number, country)
                 return get_code(wait, browser, phone_number, country)
             except TimeoutException:
-                pass
-            logger.debug("Waiting for login confirmation (%s/%s) for %s (%s)", num + 1, 60, phone_number, country)
-            sleep(5)
-        else:
-            raise Exception("Login not confirmed within timeout for %s (%s)" % (phone_number, country))
+                pass  # Ignore if the error popup isn’t found
 
-        sleep(60)
+            logger.debug(
+                "Waiting for login confirmation (%s/%s) for %s (%s)",
+                num + 1, 60, phone_number, country
+            )
+            sleep(5)
+
+        else:
+            # Timeout after all 60 attempts
+            logger.warning("Login not confirmed within timeout for %s (%s)", phone_number, country)
+            raise TimeoutException(f"Login not confirmed for {phone_number} ({country}) within timeout")
+
+        sleep(60)  # Give WhatsApp time to finalize session
+
+    except TimeoutException as e:
+        logger.warning("Timeout while getting code for %s (%s): %s", phone_number, country, str(e))
+        raise
+
+    except WebDriverException as e:
+        logger.warning("WebDriver issue during get_code for %s (%s): %s", phone_number, country, str(e))
+        raise
 
     except Exception as e:
-        logger.error("Error in get_code for %s (%s): %s", phone_number, country, e, exc_info=True)
+        # Only unexpected errors get full tracebacks
+        logger.error("Unexpected error in get_code for %s (%s): %s", phone_number, country, str(e), exc_info=True)
         raise

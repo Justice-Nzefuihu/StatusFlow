@@ -25,7 +25,7 @@ class UserDB(Base):
         default=func.now()
     )
     login_status: Mapped[bool] = mapped_column(default=False)
-    main_folder_id: Mapped[int | None] = mapped_column(unique=True, nullable=True)
+    main_folder_id: Mapped[ str | None] = mapped_column(String(50), unique=True, nullable=True)
     sequence: Mapped[int] = mapped_column(default=0, nullable=True)
     statuses: Mapped[List["StatusDB"]] = relationship(
         "StatusDB", back_populates="user", cascade="all, delete"

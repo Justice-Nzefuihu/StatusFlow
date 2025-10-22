@@ -2,12 +2,14 @@ import os
 import mimetypes
 import shutil
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
 from .config import setting
@@ -26,7 +28,8 @@ CREDENTIALS_FILE = setting.credentials_file
 TOKEN_FILE = setting.token_file
 
 # Threshold for simple vs resumable upload (5MB)
-UPLOAD_THRESHOLD = 5 * 1024 * 1024
+UPLOAD_THRESHOLD = 10 * 1024 * 1024
+MAX_WORKERS = 5
 
 
 # ---------------- Auth ----------------
@@ -61,10 +64,10 @@ def get_drive_service():
 
 # ---------------- Upload ----------------
 def upload_file(file_path: str, folder_id=None):
-    """Upload a file (encrypted first) to Google Drive."""
+    """Upload a file (encrypted first) to Google Drive safely and cleanly."""
     service = get_drive_service()
 
-    # Encrypt before upload (skip if already encrypted)
+    # Encrypt file if needed
     if not file_path.endswith(".enc"):
         file_path = encrypt_file(file_path)
 
@@ -79,41 +82,29 @@ def upload_file(file_path: str, folder_id=None):
     file_size = os.path.getsize(file_path)
 
     try:
-        if file_size < UPLOAD_THRESHOLD:
-            # -------- Simple Upload --------
-            logger.info(f"⬆ Simple upload: {file_path} ({file_size} bytes)")
-            media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
-            uploaded = service.files().create(
-                body=file_metadata, media_body=media, fields="id, name"
-            ).execute()
+        with open(file_path, "rb") as f:  # ensures file is closed properly
+            if file_size < UPLOAD_THRESHOLD:
+                media = MediaIoBaseUpload(f, mimetype=mime_type, resumable=False)
+                uploaded = service.files().create(
+                    body=file_metadata, media_body=media, fields="id, name"
+                ).execute()
+            else:
+                media = MediaIoBaseUpload(f, mimetype=mime_type, resumable=True, chunksize=20 * 1024 * 1024)
+                request = service.files().create(
+                    body=file_metadata, media_body=media, fields="id, name"
+                )
+                response = None
+                while response is None:
+                    status, response = request.next_chunk()
+                    if status:
+                        logger.info(f"Progress: {int(status.progress() * 100)}%")
+                uploaded = response
 
-        else:
-            # -------- Resumable Upload --------
-            logger.info(f"Resumable upload: {file_path} ({file_size} bytes)")
-            media = MediaFileUpload(
-                file_path, mimetype=mime_type, resumable=True, chunksize=5 * 1024 * 1024
-            )
-            request = service.files().create(
-                body=file_metadata, media_body=media, fields="id, name"
-            )
-            response = None
-            while response is None:
-                status, response = request.next_chunk()
-                if status:
-                    logger.info(f"Progress: {int(status.progress() * 100)}%")
-            uploaded = response
-
-        logger.info(f"File uploaded: {uploaded['name']} (id={uploaded['id']})")
-
-        # Remove local encrypted file only after success
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logger.info(f"Deleted local file: {file_path}")
-
+        logger.info(f" Uploaded file: {uploaded['name']} (id={uploaded['id']})")
         return uploaded
 
     except HttpError as e:
-        logger.error(f"Upload failed: {e}")
+        logger.error(f" Upload failed for {file_path}: {e}")
         raise
 
 
@@ -130,53 +121,94 @@ def upload_zip_file(local_folder, output_zip_base=None, parent_folder_id=None):
         uploaded_file = upload_file(zip_file, parent_folder_id)
         logger.info(f"Uploaded zipped folder: {local_folder}")
 
-        # Cleanup only after success
-        if os.path.exists(local_folder):
-            shutil.rmtree(local_folder)
-            logger.info(f"Deleted original folder: {local_folder}")
-
         return uploaded_file
 
     except Exception as e:
         logger.error(f"Failed to upload zipped folder {local_folder}: {e}")
         raise
 
-
-def upload_folder(folder_path, parent_folder_id=None):
-    """Recursively upload a folder to Google Drive."""
+def upload_folder(folder_path, parent_folder_id=None, delete: bool = True):
+    """Recursively upload a folder to Google Drive.
+    Deletes the folder ONLY if every upload is successful."""
     service = get_drive_service()
+    folder_name = os.path.basename(folder_path)
+    uploaded_successfully = True  # track success state
+
     try:
+        # --- Create Drive folder ---
         folder_metadata = {
-            "name": os.path.basename(folder_path),
+            "name": folder_name,
             "mimeType": "application/vnd.google-apps.folder",
         }
         if parent_folder_id:
             folder_metadata["parents"] = [parent_folder_id]
 
-        folder = service.files().create(
-            body=folder_metadata, fields="id, name, parents"
-        ).execute()
-
+        folder = service.files().create(body=folder_metadata, fields="id, name").execute()
         folder_id = folder["id"]
+        logger.info(f"Created Drive folder: {folder_name} (id={folder_id})")
 
-        for item in os.listdir(folder_path):
+        # --- Collect items ---
+        items = os.listdir(folder_path)
+        file_tasks, subfolders = [], []
+
+        for item in items:
             item_path = os.path.join(folder_path, item)
             if os.path.isfile(item_path):
-                upload_file(item_path, folder_id)
+                file_tasks.append(item_path)
             elif os.path.basename(item_path).lower() == "profiles":
-                upload_zip_file(item_path, parent_folder_id=folder_id)
+                file_tasks.append(item_path)
             elif os.path.isdir(item_path):
-                upload_folder(item_path, folder_id)
+                subfolders.append(item_path)
 
-        # Remove only after successful full upload
-        if os.path.exists(folder_path):
-            shutil.rmtree(folder_path)
-            logger.info(f"Deleted uploaded folder: {folder_path}")
+        total_items = len(file_tasks) + len(subfolders)
+        completed = 0
+        futures = []
+
+        # --- Upload files concurrently ---
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            for file_path in file_tasks:
+                if os.path.basename(file_path).lower() == "profiles":
+                    futures.append(executor.submit(upload_zip_file, file_path, parent_folder_id=folder_id))
+                else:
+                    futures.append(executor.submit(upload_file, file_path, folder_id))
+
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                    completed += 1
+                    percent = (completed / total_items) * 100
+                    logger.info(f"Uploaded file ({completed}/{total_items}) - {percent:.1f}% complete")
+                except Exception as e:
+                    uploaded_successfully = False
+                    logger.error(f" File upload error: {e}")
+
+        # --- Upload subfolders recursively ---
+        for subfolder in subfolders:
+            try:
+                upload_folder(subfolder, folder_id)
+                completed += 1
+                percent = (completed / total_items) * 100
+                logger.info(f"Uploaded folder ({completed}/{total_items}) - {percent:.1f}% complete")
+            except Exception as e:
+                uploaded_successfully = False
+                logger.error(f" Subfolder upload error: {e}")
+
+        # --- Delete only if EVERYTHING succeeded ---
+        if uploaded_successfully and delete:
+            try:
+                logger.info(f" All uploads successful. Deleting {folder_path}")
+                time.sleep(1)
+                shutil.rmtree(folder_path)
+                logger.info(f" Deleted local folder: {folder_name}")
+            except Exception as cleanup_error:
+                logger.warning(f" Could not delete folder {folder_name}: {cleanup_error}")
+        else:
+            logger.warning(f" Upload incomplete. Keeping folder {folder_path} for retry.")
 
         return folder
 
     except Exception as e:
-        logger.error(f"Failed to upload folder {folder_path}: {e}")
+        logger.error(f" Failed to upload folder {folder_name}: {e}", exc_info=True)
         raise
 
 
@@ -191,8 +223,8 @@ def download_file(file_id, save_file_path):
             done = False
             while not done:
                 _, done = downloader.next_chunk()
-
-        save_file_path = decrypt_file(save_file_path)
+        if save_file_path.endswith(".enc"):
+            save_file_path = decrypt_file(save_file_path)
 
         if save_file_path.endswith(".zip"):
             return unzip_file(save_file_path)
@@ -219,21 +251,49 @@ def list_files_in_folder(folder_id):
 
 
 def download_folder(folder_id, save_folder_path):
-    """Download a folder (recursive)."""
+    """Download a folder (recursive) with concurrent file downloads."""
     os.makedirs(save_folder_path, exist_ok=True)
     items = list_files_in_folder(folder_id)
 
+    if not items:
+        logger.warning(f"No files found in folder: {folder_id}")
+        return save_folder_path
+
+    folders = []
+    files = []
+
+    # Separate folders and files
     for item in items:
         item_id = item["id"]
         item_name = item["name"]
         item_type = item["mimeType"]
 
         if item_type == "application/vnd.google-apps.folder":
-            new_local = os.path.join(save_folder_path, item_name)
-            download_folder(item_id, new_local)
+            folders.append((item_id, item_name))
         else:
-            save_path = os.path.join(save_folder_path, item_name)
+            files.append((item_id, item_name))
+
+    # Parallel file downloads
+    def _safe_download_file(item_id, item_name):
+        """Wrapper for safe concurrent downloads."""
+        save_path = os.path.join(save_folder_path, item_name)
+        try:
+            logger.info(f"Downloading: {item_name}")
             download_file(item_id, save_path)
+            logger.info(f"Completed: {item_name}")
+        except HttpError as he:
+            logger.error(f"Google API error while downloading {item_name}: {he}")
+        except Exception as e:
+            logger.error(f"Failed: {item_name} | Error: {e}")
+
+    if files:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            executor.map(lambda f: _safe_download_file(*f), files)
+
+    # Recurse into subfolders sequentially
+    for sub_id, sub_name in folders:
+        sub_folder_path = os.path.join(save_folder_path, sub_name)
+        download_folder(sub_id, sub_folder_path)
 
     return save_folder_path
 
@@ -255,30 +315,51 @@ def unzip_file(zip_file):
     os.remove(zip_file)
     return extract_dir
 
-
 def delete_by_name(name: str, parent_id: str = None):
-    """Delete a file/folder by name from Drive."""
+    """
+    Delete a file or folder by name (recursively if folder).
+    """
     service = get_drive_service()
     try:
-        query = f"name = '{name}' and trashed = false"
+        # More lenient match (case-insensitive partial)
+        query = f"name contains '{name}' and trashed = false"
         if parent_id:
             query += f" and '{parent_id}' in parents"
 
         results = service.files().list(
-            q=query, fields="files(id, name, mimeType)"
+            q=query,
+            fields="files(id, name, mimeType, parents)"
         ).execute()
         files = results.get("files", [])
 
         if not files:
-            logger.warning(f"No file/folder named '{name}' found.")
+            logger.warning(f"No file/folder found for '{name}'.")
             return False
 
         for f in files:
-            service.files().delete(fileId=f["id"]).execute()
-            logger.info(f"Deleted: {f['name']} (id: {f['id']})")
+            file_id = f["id"]
+            mime_type = f["mimeType"]
+            logger.info(f"Found {f['name']} ({mime_type}) -> {file_id}")
+
+            # If it's a folder, delete contents first
+            if mime_type == "application/vnd.google-apps.folder":
+                child_results = service.files().list(
+                    q=f"'{file_id}' in parents and trashed = false",
+                    fields="files(id, name, mimeType)"
+                ).execute()
+
+                for child in child_results.get("files", []):
+                    delete_by_name(child["name"], file_id)
+
+            # Delete file/folder itself
+            try:
+                service.files().delete(fileId=file_id).execute()
+                logger.info(f"Deleted: {f['name']} (id: {file_id})")
+            except Exception as e:
+                logger.error(f"Failed to delete {f['name']} ({file_id}): {e}")
 
         return True
 
     except Exception as e:
-        logger.error(f"Delete failed: {e}")
-        raise
+        logger.exception(f"Delete failed for '{name}': {e}")
+        return False

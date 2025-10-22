@@ -7,11 +7,23 @@ from uuid import UUID
 from .routers import webhook, user, status
 from .model import UserDB
 from .database import get_db
+from app.middlewares import LoadBalancerMiddleware, CeleryQueueMiddleware
+# from app.middlewares import get_rate_limit
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+app = FastAPI(title="StatusFlow")
+
+# Add load balancer
+app.add_middleware(LoadBalancerMiddleware)
+app.add_middleware(CeleryQueueMiddleware)
+
+# @app.on_event("startup")
+# async def startup_event():
+#     await init_rate_limiter()
+
+# dependencies=[Depends(get_rate_limit(50, 60))]
 
 @app.get("/")
 def home():

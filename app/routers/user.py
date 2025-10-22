@@ -24,7 +24,7 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 
 
 @router.post(
-    '/register',
+    '/',
     status_code=status.HTTP_201_CREATED,
     response_model=User
 )

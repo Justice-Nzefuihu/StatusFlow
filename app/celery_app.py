@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 try:
     celery_app = Celery(
         "whatsapp_scheduler",
-        broker="sqla+sqlite:///celery_broker.db",   # no sensitive logging
+        broker="sqla+sqlite:///celery_broker.db",
         backend="db+sqlite:///celery_results.db"
     )
     logger.info("Celery app initialized successfully")
@@ -17,16 +17,19 @@ except Exception as e:
 
 try:
     celery_app.conf.update(
+        task_serializer="json",
+        result_serializer="json",
+        accept_content=["json"],
         timezone="UTC",
         enable_utc=True,
         beat_schedule={
             "check-scheduled-statuses": {
                 "task": "app.tasks.schedule_status_task",
-                "schedule": crontab(minute="*/15", hour="7-13"),  # from 7AM to 1PM every 15 minutes
+                "schedule": crontab(minute="*/1", hour="7-21"),  # from 7AM to 1PM every 15 minutes
             },
             "update-is-uploaded-status": {
                 "task": "app.tasks.update_is_uploaded",
-                "schedule": crontab(hour=0, minute=0),  # midnight daily
+                "schedule": crontab(hour=20, minute='02'),  # midnight daily
             },
         },
     )

@@ -14,7 +14,7 @@ def select_element(wait, xpath: str):
         logger.info("Element located: %s", xpath)
         return element
     except TimeoutException:
-        logger.error("Timeout: Element not found at %s", xpath, exc_info=True)
+        logger.warning("Timeout: Element not found at %s", xpath)
         raise
     except Exception as e:
         logger.error("Error selecting element %s: %s", xpath, e, exc_info=True)
@@ -31,7 +31,7 @@ def select_clickable_element(wait, browser, xpath: str):
         sleep(5)
         return element
     except TimeoutException:
-        logger.error("Timeout: Clickable element not found at %s", xpath, exc_info=True)
+        logger.warning("Timeout: Clickable element not found at %s", xpath)
         raise
     except WebDriverException as e:
         logger.error("WebDriver error while clicking %s: %s", xpath, e, exc_info=True)
@@ -71,7 +71,7 @@ def type_text(wait, xpath: str, value: str):
         sleep(2)
         logger.info("Finished typing into element: %s", xpath)
     except TimeoutException:
-        logger.error("Timeout: Element not available for typing at %s", xpath, exc_info=True)
+        logger.warning("Timeout: Element not available for typing at %s", xpath)
         raise
     except WebDriverException as e:
         logger.error("WebDriver error typing into %s: %s", xpath, e, exc_info=True)

@@ -66,7 +66,7 @@ def post_status(self, MAIN_DIR, status_ids: list[int]):
             logger.error("No user found for given statuses")
             return
 
-        browser, wait = login_or_restore(user.phone, user.country, str(os.path.join(MAIN_DIR, "profiles")))
+        browser, wait = login_or_restore(user.phone, user.country, str(os.path.join(MAIN_DIR, "profiles")), user.id, for_status=True)
 
         if image_statuses:
             logger.info(f"Sending {len(image_statuses)} image statuses for {user.phone} ({user.country})")
@@ -83,6 +83,9 @@ def post_status(self, MAIN_DIR, status_ids: list[int]):
         shutil.rmtree(MAIN_DIR)
         logger.info(f"Cleaned up MAIN_DIR {MAIN_DIR}")
 
+        browser.quit()
+        logger.info("Closed browser for %s (%s)", user.phone, user.country)
+
     except Exception as e:
         db.rollback()
         logger.error(f"Error posting status: {e}", exc_info=True)
@@ -96,30 +99,42 @@ def schedule_status_task(self):
     db = sessionLocal()
     try:
         logger.info("Running schedule_status_task")
-        now = datetime.utcnow()
-        start_time = (now - timedelta(minutes=30)).time()
+        now = datetime.now()
+        start_time = now.time()
         end_time = (now + timedelta(minutes=30)).time()
 
-        users = db.query(UserDB).join(StatusDB).filter(
-            StatusDB.is_upload == False,  # noqa: E712
-            StatusDB.schedule_time.between(start_time, end_time)
-        ).all()
+        logger.info(f"Checking statuses scheduled between {start_time} and {end_time}")
 
-        logger.info(f"Found {len(users)} users with pending statuses in time window")
+        # Query directly from Status table (avoid heavy join)
+        due_statuses = (
+            db.query(StatusDB)
+            .filter(
+                StatusDB.is_upload.is_(False),
+                StatusDB.schedule_time.between(start_time, end_time)
+            )
+            .all()
+        )
 
-        for user in users:
-            due_status_ids = []
-            for status in user.statuses:
-                days_diff = (now.date() - status.created_at.date()).days
-                if is_due_by_schedule(status.schedule, days_diff):
-                    due_status_ids.append(status.id)
+        if not due_statuses:
+            logger.info("No pending statuses in this interval.")
+            return
 
-            if due_status_ids:
-                logger.info(f"Scheduling statuses {due_status_ids} for user {user.id}")
-                chain(
-                    download_user_main_folder.s(user.id),
-                    post_status.s(due_status_ids)
-                ).delay()
+        # Group statuses by user
+        user_map = {}
+        for status in due_statuses:
+            user_map.setdefault(status.user_id, []).append(status.id)
+
+        logger.info(f"Found {len(user_map)} users with scheduled statuses.")
+
+        # Schedule Celery chains per user
+        for user_id, status_ids in user_map.items():
+            logger.info(f"Scheduling {len(status_ids)} statuses for user {user_id}")
+            chain(
+                download_user_main_folder.s(user_id),
+                post_status.s(status_ids)
+            ).delay()
+
+        logger.info("All due statuses scheduled successfully.")
 
     except Exception as e:
         logger.error(f"Error in schedule_status_task: {e}", exc_info=True)
@@ -133,7 +148,9 @@ def update_is_uploaded(self):
     db = sessionLocal()
     try:
         logger.info("Resetting is_upload flag for all statuses")
-        statuses = db.query(StatusDB).all()
+        statuses = db.query(StatusDB).filter(
+            StatusDB.is_upload.is_(True)
+        ).all()
         for status in statuses:
             status.is_upload = False
         db.commit()
@@ -147,22 +164,86 @@ def update_is_uploaded(self):
 
 @celery_app.task(bind=True, max_retries=3)
 def whatsapp_login_task(self, phone: str, country: str, PROFILES_DIR: str):
+    db = sessionLocal()
     try:
         logger.info(f"Starting WhatsApp login for {phone} ({country})")
         login_or_restore(phone, country, PROFILES_DIR)
         logger.info("Login completed successfully")
     except Exception as e:
         logger.error(f"Login failed: {e}", exc_info=True)
-        self.retry(exc=e, countdown=30)
+
+        try:
+            # Retry (up to 3 times)
+            self.retry(exc=e, countdown=30)
+        except self.MaxRetriesExceededError:
+            # Only run this block if ALL retries have failed
+            logger.critical(
+                "All login retries failed. Beginning user cleanup...",
+                extra={"phone": phone, "country": country}
+            )
+
+            try:
+                user = db.query(UserDB).filter_by(phone=phone, country=country).first()
+
+                if user:
+                    # Proceed only if login_status == False AND main_folder is None
+                    if not user.login_status and not user.main_folder_id:
+                        base_folder = os.path.join(os.path.dirname(PROFILES_DIR), str(user.id))
+
+                        # Delete user’s folder safely
+                        if os.path.exists(base_folder):
+                            shutil.rmtree(base_folder, ignore_errors=True)
+                            logger.warning(
+                                "Deleted folder for user due to failed login",
+                                extra={"phone": phone, "folder": base_folder}
+                            )
+
+                        # Delete user record from DB
+                        db.delete(user)
+                        db.commit()
+                        logger.warning(
+                            "User deleted after repeated login failures",
+                            extra={"phone": phone, "country": country}
+                        )
+                    else:
+                        logger.info(
+                            "User not deleted — login_status or main_folder set",
+                            extra={
+                                "phone": phone,
+                                "login_status": user.login_status,
+                                "main_folder": user.main_folder_id,
+                            },
+                        )
+                else:
+                    logger.warning(
+                        "User not found in DB during cleanup",
+                        extra={"phone": phone, "country": country}
+                    )
+
+            except Exception as cleanup_error:
+                db.rollback()
+                logger.error(
+                    f"Error during user cleanup: {str(cleanup_error)}",
+                    exc_info=True,
+                    extra={"phone": phone, "country": country}
+                )
+
+    finally:
+        db.close()
 
 
 @celery_app.task(bind=True, max_retries=3)
-def upload_profile(self, main_dir, user_id):
+def upload_profile(self, main_dir, user_id, for_status: bool = False):
     db = sessionLocal()
     try:
         logger.info(f"Uploading profile for user {user_id}")
         user = db.query(UserDB).filter(UserDB.id == user_id).first()
-        folder = upload_folder(main_dir)
+
+        if for_status:
+            folder = upload_folder(main_dir, delete=False)
+        else:
+            folder = upload_folder(main_dir)
+
         user.main_folder_id = folder.get("id")
         db.commit()
         logger.info("Profile uploaded successfully")
@@ -193,6 +274,13 @@ def upload_media(self, media_file, user_id):
             media_folder_id = media_folder.get("id")
 
         upload_file(media_file, media_folder_id)
+
+        MAIN_DIR = os.path.join(BASE_DIR, str(user_id))
+        
+        if os.path.exists(MAIN_DIR):
+            shutil.rmtree(MAIN_DIR)
+            logger.info(f"Deleted local media file: {media_file}")
+
         logger.info("Media uploaded successfully")
     except Exception as e:
         logger.error(f"Error in upload_media: {e}", exc_info=True)
@@ -220,6 +308,8 @@ def delete_media(self, media_file, user_id):
             media_folder_id = media_folder.get("id")
 
         name = os.path.basename(media_file)
+        if not name.endswith(".enc"):
+            name += ".enc"
         delete_by_name(name, media_folder_id)
         logger.info("Media deleted successfully")
     except Exception as e:
@@ -227,7 +317,6 @@ def delete_media(self, media_file, user_id):
         self.retry(exc=e, countdown=30)
     finally:
         db.close()
-
 
 @celery_app.task(bind=True, max_retries=3)
 def download_media(self, BASE_DIR, user_id):

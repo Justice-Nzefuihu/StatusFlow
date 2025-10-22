@@ -15,6 +15,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: UUID
     created_at: datetime
+    sequence: int
     status: List["Status"] = []
     
 
@@ -26,14 +27,13 @@ class User(UserBase):
 class Status(BaseModel):
     write_up: str | None = None
     is_text: bool = False
-    image_path: str | None = None
+    images_path: str | None = None
     schedule: ScheduleEnum
-    time: time
+    schedule_time: time
     id: UUID
     user_id: UUID
     is_upload: bool
     created_at: datetime
-    sequuence: int
     user: User
 
     class Config:

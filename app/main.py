@@ -23,7 +23,7 @@ def launch_whatsapp(PROFILES_DIR):
         logger.info(f"Launching Chrome with profile at {PROFILES_DIR}")
 
         browser = webdriver.Chrome(options=options)
-        wait = WebDriverWait(browser, timeout=10)
+        wait = WebDriverWait(browser, timeout=30)
 
         logger.info("Chrome browser launched successfully")
         return browser, wait
