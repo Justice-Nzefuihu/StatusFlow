@@ -6,10 +6,10 @@ WORKDIR /app
 
 # ---------- Copy Files ----------
 COPY . /app
-COPY requirement.txt ./
+COPY requirements.txt ./
 
 # ---------- Install Dependencies ----------
-RUN pip install --no-cache-dir -r requirement.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ---------- FastAPI Entrypoint (used by Railway) ----------
 CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000

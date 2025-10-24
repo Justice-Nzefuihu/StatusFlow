@@ -6,10 +6,10 @@ WORKDIR /app
 
 # ---------- Copy Files ----------
 COPY . /app
-COPY requirement.txt ./
+COPY requirements.txt ./
 
 # ---------- Install Dependencies ----------
-RUN pip install --no-cache-dir -r requirement.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ---------- celery (used by Render) ----------
 CMD celery -A app.celery_worker worker --loglevel=info --concurrency=2 && celery -A app.celery_worker beat --loglevel=info
