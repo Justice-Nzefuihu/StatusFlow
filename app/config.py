@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_name: str
     redis_url: str
     celery_result_backend: str
-    celery_result_url: str
+    celery_broker_url: str
     access_token: str
     phone_number_id: str
     verify_token: str

@@ -9,8 +9,7 @@ RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /va
 
 
 # ---------- Copy Files ----------
-COPY . /app
-COPY requirements.txt ./
+COPY . .
 
 # ---------- Install Dependencies ----------
 RUN pip install --no-cache-dir -r requirements.txt

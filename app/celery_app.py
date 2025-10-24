@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 try:
     celery_app = Celery(
         "whatsapp_scheduler",
-        broker=setting.celery_result_url,
+        broker=setting.celery_broker_url,
         backend=setting.celery_result_backend,
     )
     logger.info("Celery app initialized successfully")
