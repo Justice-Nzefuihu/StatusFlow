@@ -9,7 +9,7 @@ COPY . /app
 COPY requirement.txt ./
 
 # ---------- Install Dependencies ----------
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirement.txt
 
 # ---------- celery (used by Render) ----------
 CMD celery -A app.celery_worker worker --loglevel=info --concurrency=2 && celery -A app.celery_worker beat --loglevel=info
