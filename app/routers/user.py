@@ -6,6 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import get_db
 from ..model import UserDB
 from ..tasks import whatsapp_login_task, upload_profile
+from app.middlewares import get_rate_limit
+
 from celery import chain
 import pathlib
 import os
@@ -26,7 +28,7 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 @router.post(
     '/',
     status_code=status.HTTP_201_CREATED,
-    response_model=User
+    response_model=User, dependencies=[Depends(get_rate_limit(50, 60))]
 )
 def create_user(
     user: UserCreate,

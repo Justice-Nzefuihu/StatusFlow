@@ -3,10 +3,11 @@ import psutil
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 import logging
-# import aioredis
-# from fastapi_limiter import FastAPILimiter
-# from fastapi_limiter.depends import RateLimiter
+import aioredis
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
 from .celery_app import celery_app
+from .config import setting
 
 logger = logging.getLogger(__name__)
 
@@ -52,34 +53,27 @@ class CeleryQueueMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# async def init_rate_limiter(redis_urls=None):
-#     """
-#     Initialize a distributed Redis cluster rate limiter for millions of users.
-#     """
-#     if not redis_urls:
-#         redis_urls = [
-#             "redis://redis-node1:6379",
-#             "redis://redis-node2:6379",
-#             "redis://redis-node3:6379",
-#         ]
-
-#     try:
-#         redis = await aioredis.from_url(
-#             ",".join(redis_urls),
-#             encoding="utf-8",
-#             decode_responses=True,
-#         )
-#         await FastAPILimiter.init(redis)
-#         logger.info(f" Distributed rate limiter initialized with nodes: {redis_urls}")
-#         return redis
-#     except Exception as e:
-#         logger.error(f" Failed to initialize Redis cluster: {e}")
-#         raise
+async def init_rate_limiter(redis_urls=None):
+    """
+    Initialize a distributed Redis cluster rate limiter for millions of users.
+    """
+    try:
+        redis = await aioredis.from_url(
+            setting.redis_url,
+            encoding="utf-8",
+            decode_responses=True,
+        )
+        await FastAPILimiter.init(redis)
+        logger.info(f" Distributed rate limiter initialized with nodes: {redis_urls}")
+        return redis
+    except Exception as e:
+        logger.error(f" Failed to initialize Redis cluster: {e}")
+        raise
 
 
-# def get_rate_limit(times: int = 100, window_seconds: int = 60):
-#     """
-#     Create a rate limiter dependency.
-#     Example: Depends(get_rate_limit(100, 60)) -> 100 reqs/min per user.
-#     """
-#     return RateLimiter(times=times, seconds=window_seconds)
+def get_rate_limit(times: int = 100, window_seconds: int = 60):
+    """
+    Create a rate limiter dependency.
+    Example: Depends(get_rate_limit(100, 60)) -> 100 reqs/min per user.
+    """
+    return RateLimiter(times=times, seconds=window_seconds)

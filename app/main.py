@@ -30,4 +30,5 @@ def launch_whatsapp(PROFILES_DIR):
 
     except Exception as e:
         logger.error(f"Failed to launch WhatsApp Web with Chrome: {e}")
+        browser.quit()
         raise

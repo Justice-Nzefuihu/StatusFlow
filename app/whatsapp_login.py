@@ -1,6 +1,5 @@
 import logging
 import pathlib
-from uuid import UUID
 from time import sleep
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from .whatsapp_utils import select_clickable_element, type_text, select_element
@@ -31,11 +30,12 @@ def phone_number_login(wait, browser, phone_number: str, country: str):
         raise
 
 
-def login_or_restore(phone_number: str, country: str, PROFILES_DIR, user_id: UUID = 0, for_status: bool = False):
+def login_or_restore(phone_number: str, country: str, PROFILES_DIR, for_status: bool = False):
     logger.info("Launching WhatsApp Web for %s (%s)", phone_number, country)
     try:
         browser, wait = launch_whatsapp(str(PROFILES_DIR))
         browser.get("https://web.whatsapp.com/")
+        re_uploading = False
     except WebDriverException as e:
         logger.error("Failed to launch WhatsApp Web for %s (%s): %s", phone_number, country, e, exc_info=True)
         raise
@@ -55,14 +55,11 @@ def login_or_restore(phone_number: str, country: str, PROFILES_DIR, user_id: UUI
             changed = change_login_status(phone_number, country)
             if changed:
                 phone_number_login(wait, browser, phone_number, country)
-                if for_status and user_id != 0:
-                   
-                    from .tasks import upload_profile
-
+                if for_status:
                     MAIN_DIR = pathlib.Path(PROFILES_DIR).resolve().parent
 
                     if MAIN_DIR.exists():
-                        upload_profile.delay(str(MAIN_DIR), user_id=user_id, for_status=for_status)
+                        re_uploading = True
                         logger.info(f"Queued profile upload for {MAIN_DIR}")
                     else:
                         logger.error(f"Upload directory not found: {MAIN_DIR}")
@@ -75,13 +72,13 @@ def login_or_restore(phone_number: str, country: str, PROFILES_DIR, user_id: UUI
             raise
     
     logger.info("Waiting to complete login for %s (%s)...", phone_number, country)
-    sleep(120)
+    sleep(60)
     
     if not for_status:
         browser.quit()
         logger.info("Closed browser for %s (%s)", phone_number, country)
 
-    return browser, wait
+    return browser, wait, re_uploading
 
 
 def get_code(wait, browser, phone_number: str, country: str):
@@ -125,7 +122,7 @@ def get_code(wait, browser, phone_number: str, country: str):
             logger.warning("Login not confirmed within timeout for %s (%s)", phone_number, country)
             raise TimeoutException(f"Login not confirmed for {phone_number} ({country}) within timeout")
 
-        sleep(60)  # Give WhatsApp time to finalize session
+        sleep(30)  # Give WhatsApp time to finalize session
 
     except TimeoutException as e:
         logger.warning("Timeout while getting code for %s (%s): %s", phone_number, country, str(e))

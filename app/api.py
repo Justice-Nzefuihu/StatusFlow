@@ -7,8 +7,8 @@ from uuid import UUID
 from .routers import webhook, user, status
 from .model import UserDB
 from .database import get_db
-from app.middlewares import LoadBalancerMiddleware, CeleryQueueMiddleware
-# from app.middlewares import get_rate_limit
+from app.middlewares import LoadBalancerMiddleware, CeleryQueueMiddleware, init_rate_limiter
+from app.middlewares import get_rate_limit
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,13 +19,11 @@ app = FastAPI(title="StatusFlow")
 app.add_middleware(LoadBalancerMiddleware)
 app.add_middleware(CeleryQueueMiddleware)
 
-# @app.on_event("startup")
-# async def startup_event():
-#     await init_rate_limiter()
+@app.on_event("startup")
+async def startup_event():
+    await init_rate_limiter()
 
-# dependencies=[Depends(get_rate_limit(50, 60))]
-
-@app.get("/")
+@app.get("/", dependencies=[Depends(get_rate_limit(50, 60))])
 def home():
     try:
         logger.info("Home endpoint accessed successfully")
@@ -35,7 +33,7 @@ def home():
         raise HTTPException(s.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@app.post("/confirma-login/{user_id}")
+@app.post("/confirma-login/{user_id}", dependencies=[Depends(get_rate_limit(50, 60))])
 def confirm_login(user_id: UUID, db: Annotated[Session, Depends(get_db)]):
     try:
         logger.info("Received confirm_login request")

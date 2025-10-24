@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     database_password: str
     database_port: int
     database_name: str
+    redis_url: str
+    celery_result_backend: str
+    celery_result_url: str
     access_token: str
     phone_number_id: str
     verify_token: str

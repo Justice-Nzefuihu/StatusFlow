@@ -3,6 +3,8 @@ import pathlib
 import shutil
 import logging
 from datetime import datetime, timedelta
+import pytz
+
 from celery import chain
 from .celery_app import celery_app
 from .post_status import send_status_images, send_status_texts
@@ -65,8 +67,8 @@ def post_status(self, MAIN_DIR, status_ids: list[int]):
         if not user:
             logger.error("No user found for given statuses")
             return
-
-        browser, wait = login_or_restore(user.phone, user.country, str(os.path.join(MAIN_DIR, "profiles")), user.id, for_status=True)
+        
+        browser, wait, re_uploading = login_or_restore(user.phone, user.country, str(os.path.join(MAIN_DIR, "profiles")), for_status=True)
 
         if image_statuses:
             logger.info(f"Sending {len(image_statuses)} image statuses for {user.phone} ({user.country})")
@@ -78,16 +80,22 @@ def post_status(self, MAIN_DIR, status_ids: list[int]):
         for status in statuses:
             status.is_upload = True
         db.commit()
-        logger.info("Statuses marked as uploaded")
+        logger.info("Statuses marked as uploaded. Waiting before closing browser...")
 
-        shutil.rmtree(MAIN_DIR)
-        logger.info(f"Cleaned up MAIN_DIR {MAIN_DIR}")
+        try:
+            browser.quit()
+            logger.info("Browser closed successfully after sending statuses for %s (%s)", user.phone, user.country)
+        except Exception as e:
+            logger.error(f"Failed to close browser: {e}", exc_info=True)
 
-        browser.quit()
-        logger.info("Closed browser for %s (%s)", user.phone, user.country)
+        if re_uploading:
+            return {"MAIN_DIR": MAIN_DIR, "user_id": user.id}
+        else:
+            return {"MAIN_DIR": MAIN_DIR}
 
     except Exception as e:
         db.rollback()
+        browser.quit()
         logger.error(f"Error posting status: {e}", exc_info=True)
         self.retry(exc=e, countdown=30)
     finally:
@@ -99,7 +107,9 @@ def schedule_status_task(self):
     db = sessionLocal()
     try:
         logger.info("Running schedule_status_task")
-        now = datetime.now()
+
+        timezone = pytz.timezone("Africa/Lagos")
+        now = datetime.now(timezone)
         start_time = now.time()
         end_time = (now + timedelta(minutes=30)).time()
 
@@ -122,7 +132,9 @@ def schedule_status_task(self):
         # Group statuses by user
         user_map = {}
         for status in due_statuses:
-            user_map.setdefault(status.user_id, []).append(status.id)
+            days_diff = (now.date() - status.created_at.date()).days 
+            if is_due_by_schedule(status.schedule, days_diff) or days_diff == 1:
+                user_map.setdefault(status.user_id, []).append(status.id)
 
         logger.info(f"Found {len(user_map)} users with scheduled statuses.")
 
@@ -131,7 +143,7 @@ def schedule_status_task(self):
             logger.info(f"Scheduling {len(status_ids)} statuses for user {user_id}")
             chain(
                 download_user_main_folder.s(user_id),
-                post_status.s(status_ids)
+                post_status.s(status_ids), delete_main_dir.s()
             ).delay()
 
         logger.info("All due statuses scheduled successfully.")
@@ -141,6 +153,21 @@ def schedule_status_task(self):
         self.retry(exc=e, countdown=30)
     finally:
         db.close()
+
+@celery_app.task(bind=True)
+def delete_main_dir(self, post_status_result: dict):
+    MAIN_DIR = post_status_result["MAIN_DIR"]
+    user_id = post_status_result.get("user_id")
+    
+    if user_id:
+        upload_profile.delay(str(MAIN_DIR), user_id=user_id)
+    else:
+        if not MAIN_DIR.endswith("_uploading"):
+            MAIN_DIR += "_uploading"
+
+        shutil.rmtree(MAIN_DIR)
+        logger.info(f"Cleaned up MAIN_DIR {MAIN_DIR}")
+
 
 
 @celery_app.task(bind=True, max_retries=3)
@@ -233,16 +260,13 @@ def whatsapp_login_task(self, phone: str, country: str, PROFILES_DIR: str):
 
 
 @celery_app.task(bind=True, max_retries=3)
-def upload_profile(self, main_dir, user_id, for_status: bool = False):
+def upload_profile(self, main_dir, user_id):
     db = sessionLocal()
     try:
         logger.info(f"Uploading profile for user {user_id}")
         user = db.query(UserDB).filter(UserDB.id == user_id).first()
 
-        if for_status:
-            folder = upload_folder(main_dir, delete=False)
-        else:
-            folder = upload_folder(main_dir)
+        folder = upload_folder(main_dir)
 
         user.main_folder_id = folder.get("id")
         db.commit()
@@ -357,7 +381,7 @@ def download_user_main_folder(self, user_id):
         logger.info(f"Downloading main folder for user {user_id}")
         user = db.query(UserDB).filter(UserDB.id == user_id).first()
 
-        MAIN_DIR = os.path.join(BASE_DIR, str(user_id))
+        MAIN_DIR = os.path.join(BASE_DIR, str(user_id) + "_uploading")
         os.makedirs(MAIN_DIR, exist_ok=True)
 
         download_folder(user.main_folder_id, MAIN_DIR)

@@ -1,14 +1,15 @@
 import logging
 from celery import Celery
 from celery.schedules import crontab
+from .config import setting
 
 logger = logging.getLogger(__name__)
 
 try:
     celery_app = Celery(
         "whatsapp_scheduler",
-        broker="sqla+sqlite:///celery_broker.db",
-        backend="db+sqlite:///celery_results.db"
+        broker=setting.celery_result_url,
+        backend=setting.celery_result_backend,
     )
     logger.info("Celery app initialized successfully")
 except Exception as e:
@@ -20,16 +21,16 @@ try:
         task_serializer="json",
         result_serializer="json",
         accept_content=["json"],
-        timezone="UTC",
-        enable_utc=True,
+        timezone="Africa/Lagos",
+        enable_utc=False,
         beat_schedule={
+             "update-is-uploaded-status": {
+                "task": "app.tasks.update_is_uploaded",
+                "schedule": crontab(hour=10, minute=18),  # midnight daily
+            },
             "check-scheduled-statuses": {
                 "task": "app.tasks.schedule_status_task",
-                "schedule": crontab(minute="*/1", hour="7-21"),  # from 7AM to 1PM every 15 minutes
-            },
-            "update-is-uploaded-status": {
-                "task": "app.tasks.update_is_uploaded",
-                "schedule": crontab(hour=20, minute='02'),  # midnight daily
+                "schedule": crontab(minute="*/1", hour="7-22"),  # from 7AM to 1PM every 15 minutes
             },
         },
     )

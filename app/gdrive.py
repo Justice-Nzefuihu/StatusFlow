@@ -4,6 +4,8 @@ import shutil
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import humanize
+import socket
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -30,6 +32,9 @@ TOKEN_FILE = setting.token_file
 # Threshold for simple vs resumable upload (5MB)
 UPLOAD_THRESHOLD = 10 * 1024 * 1024
 MAX_WORKERS = 5
+
+# Extend global socket timeout (important for large files)
+socket.setdefaulttimeout(300)  # 5 minute
 
 
 # ---------------- Auth ----------------
@@ -80,6 +85,8 @@ def upload_file(file_path: str, folder_id=None):
         mime_type = "application/octet-stream"
 
     file_size = os.path.getsize(file_path)
+    human_size = humanize.naturalsize(file_size)
+    logger.info(f"Uploading '{os.path.basename(file_path)}' ({human_size})")
 
     try:
         with open(file_path, "rb") as f:  # ensures file is closed properly
@@ -127,11 +134,16 @@ def upload_zip_file(local_folder, output_zip_base=None, parent_folder_id=None):
         logger.error(f"Failed to upload zipped folder {local_folder}: {e}")
         raise
 
-def upload_folder(folder_path, parent_folder_id=None, delete: bool = True):
+def upload_folder(folder_path, parent_folder_id=None):
     """Recursively upload a folder to Google Drive.
     Deletes the folder ONLY if every upload is successful."""
     service = get_drive_service()
+
     folder_name = os.path.basename(folder_path)
+    prev_folder_name = folder_name
+    if folder_name.endswith("_uploading"):
+        folder_name = folder_name[:-10]
+
     uploaded_successfully = True  # track success state
 
     try:
@@ -194,47 +206,93 @@ def upload_folder(folder_path, parent_folder_id=None, delete: bool = True):
                 logger.error(f" Subfolder upload error: {e}")
 
         # --- Delete only if EVERYTHING succeeded ---
-        if uploaded_successfully and delete:
+        if uploaded_successfully:
             try:
                 logger.info(f" All uploads successful. Deleting {folder_path}")
                 time.sleep(1)
-                shutil.rmtree(folder_path)
-                logger.info(f" Deleted local folder: {folder_name}")
+                shutil.rmtree(prev_folder_name)
+                logger.info(f" Deleted local folder: {prev_folder_name}")
             except Exception as cleanup_error:
-                logger.warning(f" Could not delete folder {folder_name}: {cleanup_error}")
+                logger.warning(f" Could not delete folder {prev_folder_name}: {cleanup_error}")
         else:
             logger.warning(f" Upload incomplete. Keeping folder {folder_path} for retry.")
 
         return folder
 
     except Exception as e:
-        logger.error(f" Failed to upload folder {folder_name}: {e}", exc_info=True)
+        logger.error(f" Failed to upload folder {prev_folder_name}: {e}", exc_info=True)
         raise
 
 
 # ---------------- Download ----------------
-def download_file(file_id, save_file_path):
-    """Download and decrypt a file from Google Drive."""
-    service = get_drive_service()
-    try:
-        request = service.files().get_media(fileId=file_id)
-        with open(save_file_path, "wb") as fh:
-            downloader = MediaIoBaseDownload(fh, request)
-            done = False
-            while not done:
-                _, done = downloader.next_chunk()
-        if save_file_path.endswith(".enc"):
-            save_file_path = decrypt_file(save_file_path)
 
+def download_file(file_id, save_file_path, max_retries=5):
+    """Download (with progress + retry) and decrypt a file from Google Drive."""
+    service = get_drive_service()
+
+    try:
+        # --- metadata ---
+        file_meta = service.files().get(fileId=file_id, fields="name,size").execute()
+        file_name = file_meta.get("name", "unknown")
+        file_size = int(file_meta.get("size", 0))
+        readable_size = humanize.naturalsize(file_size)
+        logger.info(f"Downloading '{file_name}' ({readable_size}) to {save_file_path}")
+
+        request = service.files().get_media(fileId=file_id)
+        start_time = time.time()
+        done = False
+        last_percent = 0
+
+        with open(save_file_path, "wb") as fh:
+            downloader = MediaIoBaseDownload(fh, request, chunksize=10 * 1024 * 1024)
+
+            retries = 0
+            while not done:
+                try:
+                    status, done = downloader.next_chunk()
+                    if status:
+                        percent = int(status.progress() * 100)
+                        if percent - last_percent >= 5 or percent == 100:
+                            elapsed = time.time() - start_time
+                            downloaded = status.resumable_progress
+                            speed = downloaded / elapsed if elapsed else 0
+                            logger.info(
+                                f"{percent}% ({humanize.naturalsize(downloaded)} / {readable_size}) "
+                                f"at {humanize.naturalsize(speed)}/s"
+                            )
+                            last_percent = percent
+
+                except TimeoutError as e:
+                    retries += 1
+                    if retries > max_retries:
+                        logger.error(f"Download failed after {max_retries} retries: {e}")
+                        raise
+                    logger.warning(f"Timeout occurred (attempt {retries}/{max_retries}), retrying after 5s...")
+                    time.sleep(5)
+                    # Recreate downloader to resume
+                    downloader = MediaIoBaseDownload(fh, request, chunksize=10 * 1024 * 1024)
+
+        logger.info(f" Download complete: {save_file_path}")
+
+        # --- post-download ---
+        if save_file_path.endswith(".enc"):
+            logger.info("Decrypting downloaded file...")
+            save_file_path = decrypt_file(save_file_path)
         if save_file_path.endswith(".zip"):
+            logger.info("Unzipping archive...")
             return unzip_file(save_file_path)
 
         return save_file_path
 
-    except Exception as e:
-        logger.error(f"Download failed: {e}")
+    except HttpError as he:
+        logger.error(f"Google API error: {he}")
         raise
-
+    except socket.timeout:
+        logger.error("Download failed due to persistent timeout.")
+        raise
+    except Exception as e:
+        logger.error(f"Download failed: {e}", exc_info=True)
+        raise
 
 def list_files_in_folder(folder_id):
     """List files inside a Drive folder."""
@@ -302,13 +360,24 @@ def download_folder(folder_id, save_folder_path):
 def zip_local_folder(folder_path, output_zip_path):
     """Zip a folder into a .zip file."""
     os.makedirs(os.path.dirname(output_zip_path), exist_ok=True)
-    zip_file = shutil.make_archive(output_zip_path, "zip", folder_path)
+    def ignore_patterns(path, names):
+        return {'lockfile'} if 'lockfile' in names else set()
+
+    zip_file = shutil.make_archive(
+        output_zip_path,
+        'zip',
+        root_dir=folder_path,
+        logger=logger.info,
+        ignore=ignore_patterns
+    )
     return zip_file
 
 
 def unzip_file(zip_file):
     """Unzip a file and remove the archive."""
-    extract_dir = os.path.splitext(zip_file)[0]
+    extract_dir = str(os.path.splitext(zip_file)[0])
+    if extract_dir.endswith("_backup"):
+        extract_dir = extract_dir[:-7]
     os.makedirs(extract_dir, exist_ok=True)
     shutil.unpack_archive(zip_file, extract_dir, "zip")
 

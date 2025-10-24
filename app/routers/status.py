@@ -8,11 +8,13 @@ from ..schemas import Status
 from ..database import get_db
 from ..model import StatusDB, UserDB, ScheduleEnum
 from ..tasks import upload_media, delete_media, download_media
+from app.middlewares import get_rate_limit
+
 import os
 import shutil
 import pathlib
 import logging
-from datetime import time
+from datetime import time, datetime, timedelta
 from uuid import UUID
 
 # ---------------- Logging Setup ---------------- #
@@ -26,9 +28,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/status/{user_id}", tags=["Status"])
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 
+def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:
+    schedule_map = {
+        ScheduleEnum.EVERYDAY.value: 1,
+        ScheduleEnum.EVERY_2_DAYS.value: 2,
+        ScheduleEnum.EVERY_3_DAYS.value: 3,
+        ScheduleEnum.EVERY_4_DAYS.value: 4,
+        ScheduleEnum.EVERY_5_DAYS.value: 5,
+        ScheduleEnum.EVERY_6_DAYS.value: 6,
+        ScheduleEnum.EVERY_WEEK.value: 7,
+        ScheduleEnum.EVERY_10_DAYS.value: 10,
+        ScheduleEnum.EVERY_2_WEEKS.value: 14,
+    }
+    interval = schedule_map.get(schedule, 1)
+    return days_diff % interval == 0
+
 
 # ---------------- Create Status ---------------- #
-@router.post('/', status_code=status.HTTP_201_CREATED, response_model=Status)
+@router.post('/', status_code=status.HTTP_201_CREATED, 
+             response_model=Status, 
+             dependencies=[Depends(get_rate_limit(50, 60))])
 def create_status(
     *,
     user_id: UUID,
@@ -49,11 +68,15 @@ def create_status(
 
         if image:
             file_name = image.filename
-            file_location = os.path.join(MAIN_DIR, file_name)
+            file_location = os.path.join(MEDIA_DIR, file_name)
             with open(file_location, "wb") as buffer:
                 shutil.copyfileobj(image.file, buffer)
+
+            
             image_path = str(file_location)
-            logger.info(f"Uploaded media saved at {file_location}")
+            position = image_path.find(str(user_id))
+            user_id_length = len(str(user_id))
+            image_path = image_path[:position+user_id_length] + "_uploading" + image_path[position+user_id_length:]
 
         if is_text and image is not None:
             raise HTTPException(
@@ -126,7 +149,7 @@ def create_status(
         logger.info(f"New status created for user {user_id} (status_id={new_status.id})")
 
         if image_path:
-            upload_media.delay(image_path, user_id)
+            upload_media.delay(str(file_location), user_id)
             logger.info(f"Media upload task triggered for user {user_id}")
 
 
@@ -144,7 +167,8 @@ def create_status(
 
 
 # ---------------- Get Statuses ---------------- #
-@router.get('/', response_model=List[Status])
+@router.get('/', response_model=List[Status], 
+            dependencies=[Depends(get_rate_limit(50, 60))])
 def get_statuses(user_id: UUID, db: Annotated[Session, Depends(get_db)]):
     try:
         user = db.query(UserDB).filter_by(id=user_id).first()
@@ -175,7 +199,9 @@ def get_statuses(user_id: UUID, db: Annotated[Session, Depends(get_db)]):
 
 
 # ---------------- Delete Status ---------------- #
-@router.delete('/{status_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{status_id}', 
+               status_code=status.HTTP_204_NO_CONTENT
+               , dependencies=[Depends(get_rate_limit(50, 60))])
 def delete_status(user_id: UUID, status_id: UUID, db: Annotated[Session, Depends(get_db)]):
     try:
         user = db.query(UserDB).filter_by(id=user_id).first()
@@ -196,6 +222,21 @@ def delete_status(user_id: UUID, status_id: UUID, db: Annotated[Session, Depends
                 status.HTTP_404_NOT_FOUND,
                 detail=f"Status with id '{status_id}' not found"
             )
+        
+        now = datetime.now()
+        start_time = (now - timedelta(minutes=5)).time()
+        end_time = (now + timedelta(minutes=35)).time()
+        days_diff = (now.date() - current_status.created_at.date()).days
+
+        is_within_window = start_time <= current_status.schedule_time <= end_time
+
+        if((is_due_by_schedule(current_status.schedule, days_diff) 
+            or days_diff ==1)
+           and is_within_window) and not current_status.is_upload:
+            raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete status — upload in progress or within schedule time."
+        )
 
         image_path = current_status.images_path
         current_status_qs.delete(synchronize_session=False)
@@ -204,6 +245,12 @@ def delete_status(user_id: UUID, status_id: UUID, db: Annotated[Session, Depends
         logger.info(f"Deleted status {status_id} for user {user_id}")
 
         if image_path:
+            
+            if image_path.endswith("_uploading"):
+                position = image_path.find(str(user_id))
+                user_id_length = len(str(user_id))
+                image_path = image_path[:position+user_id_length] + image_path[position+user_id_length:]
+
             delete_media.delay(str(image_path), str(user_id))
             logger.info(f"Triggered media deletion for user {user_id}")
 
@@ -221,7 +268,9 @@ def delete_status(user_id: UUID, status_id: UUID, db: Annotated[Session, Depends
 
 
 # ---------------- Update Status ---------------- #
-@router.put('/{status_id}', response_model=Status)
+@router.put('/{status_id}', 
+            response_model=Status, 
+            dependencies=[Depends(get_rate_limit(50, 60))])
 def update_status(
     *,
     user_id: UUID,
@@ -250,6 +299,21 @@ def update_status(
                 status.HTTP_404_NOT_FOUND,
                 detail=f"Status with id '{status_id}' not found"
             )
+        
+        now = datetime.now()
+        start_time = (now - timedelta(minutes=5)).time()
+        end_time = (now + timedelta(minutes=35)).time()
+        days_diff = (now.date() - current_status.created_at.date()).days
+
+        is_within_window = start_time <= current_status.schedule_time <= end_time
+
+        if((is_due_by_schedule(current_status.schedule, days_diff) 
+            or days_diff ==1)
+           and is_within_window and not current_status.is_upload):
+            raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot update status — upload in progress or within schedule time."
+        )
         
         if current_status.is_text:
             if write_up == '':
