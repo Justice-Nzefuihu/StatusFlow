@@ -26,11 +26,11 @@ try:
         beat_schedule={
              "update-is-uploaded-status": {
                 "task": "app.tasks.update_is_uploaded",
-                "schedule": crontab(hour=10, minute=18),  # midnight daily
+                "schedule": crontab(hour=00, minute=00),  # midnight daily
             },
             "check-scheduled-statuses": {
                 "task": "app.tasks.schedule_status_task",
-                "schedule": crontab(minute="*/1", hour="7-22"),  # from 7AM to 1PM every 15 minutes
+                "schedule": crontab(minute="*/15", hour="7-13"),  # from 7AM to 1PM every 15 minutes
             },
         },
     )
