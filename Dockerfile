@@ -11,14 +11,13 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     libnss3 \
-    libgconf-2-4 \
     libxss1 \
-    libappindicator1 \
-    libindicator7 \
-    fonts-liberation \
-    xdg-utils \
     libgbm-dev \
     libxkbcommon-x11-0 \
+    fonts-liberation \
+    xdg-utils \
+    libasound2 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
     
 # ---------- Copy Files ----------
