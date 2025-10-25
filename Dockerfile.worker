@@ -31,4 +31,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8080
 
 # ---------- celery (used by Render) ----------
-CMD celery -A app.celery_app worker --loglevel=info --concurrency=2 && celery -A app.celery_app beat --loglevel=info
+CMD celery -A app.celery_app worker --loglevel=info --concurrency=2 && celery -A app.celery_app beat --loglevel=info && uvicorn app.dummy:app --host 0.0.0.0 --port 8080

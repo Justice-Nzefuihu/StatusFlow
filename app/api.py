@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status as s
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Annotated
 from uuid import UUID
+import os
 
 from .routers import webhook, user, status
 from .model import UserDB
@@ -14,7 +16,25 @@ from app.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Read config from environment
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    # split by comma and strip whitespace
+    ALLOWED_ORIGINS = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+else:
+    ALLOWED_ORIGINS = []
+
+
 app = FastAPI(title="StatusFlow")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE",],
+    allow_headers=["*"],
+)
 
 # Add load balancer
 app.add_middleware(LoadBalancerMiddleware)
