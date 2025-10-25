@@ -1,13 +1,16 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from app.tasks import send_error_email
+
 
 
 class CeleryEmailHandler(logging.Handler):
     """Custom logging handler that sends error logs via Celery email task."""
 
     def emit(self, record):
+        
+        from app.tasks import send_error_email
+
         try:
             subject = f"[ERROR LOG] {record.levelname} in {record.module}"
             message = self.format(record)
