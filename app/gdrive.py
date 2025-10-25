@@ -1,7 +1,6 @@
 import os
 import mimetypes
 import shutil
-import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import humanize
@@ -18,11 +17,9 @@ from .config import setting
 from .crypto import encrypt_file, decrypt_file
 
 # ---------------- Logging ----------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # ---------------- Config ----------------
 SCOPES = [setting.google_scopes]

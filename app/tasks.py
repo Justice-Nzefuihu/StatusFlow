@@ -1,9 +1,10 @@
 import os
 import pathlib
 import shutil
-import logging
 from datetime import datetime, timedelta
 import pytz
+from email.mime.text import MIMEText
+import smtplib
 
 from celery import chain
 from .celery_app import celery_app
@@ -17,11 +18,9 @@ from .gdrive import (
 )
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 
@@ -392,3 +391,32 @@ def download_user_main_folder(self, user_id):
         self.retry(exc=e, countdown=30)
     finally:
         db.close()
+
+
+@celery_app.task(bind=True, max_retries=3)
+def send_error_email(self, subject: str, message: str):
+    """
+    Sends an email asynchronously via Celery when an error log is triggered.
+    """
+    try:
+        from_email = os.getenv("MAIL_FROM")
+        to_email = os.getenv("MAIL_TO")
+        password = os.getenv("MAIL_PASSWORD")
+        smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.getenv("MAIL_PORT", 587))
+
+        msg = MIMEText(message)
+        msg["Subject"] = subject
+        msg["From"] = from_email
+        msg["To"] = to_email
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(from_email, password)
+            server.sendmail(from_email, [to_email], msg.as_string())
+
+        logger.info(f"Error email sent: {subject}")
+
+    except Exception as e:
+        logger.error(f"Error sending email: {e}")
+        raise self.retry(exc=e, countdown=60)

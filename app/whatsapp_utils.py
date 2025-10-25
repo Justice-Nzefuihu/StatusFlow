@@ -1,11 +1,12 @@
-import logging
 from time import sleep
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def select_element(wait, xpath: str):
     try:

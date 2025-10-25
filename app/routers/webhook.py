@@ -2,18 +2,15 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 import hmac
 import hashlib
-import logging
 from ..config import setting
 from app.middlewares import get_rate_limit
 
-router = APIRouter(prefix="/webhook", tags=["Webhook"])
-
 # Configure logger
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+router = APIRouter(prefix="/webhook", tags=["Webhook"])
 
 VERIFY_TOKEN = setting.verify_token
 APP_SECRET = setting.app_secret

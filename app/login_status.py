@@ -1,13 +1,10 @@
-import logging
 from app.database import sessionLocal
 from app.model import UserDB
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_login_status(phone: str, country: str):

@@ -1,9 +1,10 @@
-import logging
 import os
 from cryptography.fernet import Fernet, InvalidToken
 from .config import setting
 
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 try:
     KEY = setting.fernet_key

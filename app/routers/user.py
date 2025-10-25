@@ -11,16 +11,14 @@ from app.middlewares import get_rate_limit
 from celery import chain
 import pathlib
 import os
-import logging
-
-router = APIRouter(prefix="/user", tags=["User"])
 
 # Configure logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+router = APIRouter(prefix="/user", tags=["User"])
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 

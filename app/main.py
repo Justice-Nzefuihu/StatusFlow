@@ -1,14 +1,11 @@
-import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def launch_whatsapp(PROFILES_DIR):
@@ -17,6 +14,7 @@ def launch_whatsapp(PROFILES_DIR):
         options = Options()
         options.add_argument(f"--user-data-dir={PROFILES_DIR}")
         options.add_argument("--profile-directory=Default")
+        options.add_argument("--headless=new")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
 

@@ -1,10 +1,11 @@
-import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .config import setting
 from sqlalchemy.exc import SQLAlchemyError
 
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Build database URL (excluding sensitive info from logs)
 DATABASE_URL = (

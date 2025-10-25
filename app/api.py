@@ -1,4 +1,3 @@
-import logging
 from fastapi import FastAPI, Depends, HTTPException, status as s
 from sqlalchemy.orm import Session
 from typing import Annotated
@@ -11,7 +10,9 @@ from app.middlewares import LoadBalancerMiddleware, CeleryQueueMiddleware, init_
 from app.middlewares import get_rate_limit
 
 # Configure logging
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 app = FastAPI(title="StatusFlow")
 

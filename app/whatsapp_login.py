@@ -1,4 +1,3 @@
-import logging
 import pathlib
 from time import sleep
 from selenium.common.exceptions import TimeoutException, WebDriverException
@@ -7,7 +6,9 @@ from .main import launch_whatsapp
 from .login_status import get_login_status, change_login_status
 
 
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def phone_number_login(wait, browser, phone_number: str, country: str):
     try:

@@ -2,14 +2,15 @@ import psutil
 # from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
-import logging
 from redis import asyncio as aioredis
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
 from .celery_app import celery_app
 from .config import setting
 
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class LoadBalancerMiddleware(BaseHTTPMiddleware):

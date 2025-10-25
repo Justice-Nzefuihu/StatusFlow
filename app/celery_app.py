@@ -1,9 +1,10 @@
-import logging
 from celery import Celery
 from celery.schedules import crontab
 from .config import setting
 
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 try:
     celery_app = Celery(

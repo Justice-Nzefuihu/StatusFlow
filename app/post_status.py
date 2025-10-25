@@ -1,13 +1,10 @@
-import logging
 from time import sleep
 from .whatsapp_utils import select_clickable_element, type_text
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 try:
     import pyautogui
