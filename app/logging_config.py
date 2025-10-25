@@ -8,7 +8,7 @@ class CeleryEmailHandler(logging.Handler):
     """Custom logging handler that sends error logs via Celery email task."""
 
     def emit(self, record):
-        
+
         from app.tasks import send_error_email
 
         try:
@@ -30,6 +30,10 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_FILE = os.getenv("LOG_FILE", "logs/app.log")
 
 # Ensure logs directory exists
+# Create directory only if a folder is in the path
+log_dir = os.path.dirname(LOG_FILE)
+if log_dir:
+    os.makedirs(log_dir, exist_ok=True)
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
 # === Root logger setup ===
