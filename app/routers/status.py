@@ -42,7 +42,7 @@ def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:
 
 
 # ---------------- Create Status ---------------- #
-@router.post('/', status_code=status.HTTP_201_CREATED, 
+@router.post('', status_code=status.HTTP_201_CREATED, 
              response_model=Status, 
              dependencies=[Depends(get_rate_limit(50, 60))])
 def create_status(
@@ -164,7 +164,7 @@ def create_status(
 
 
 # ---------------- Get Statuses ---------------- #
-@router.get('/', response_model=List[Status], 
+@router.get('', response_model=List[Status], 
             dependencies=[Depends(get_rate_limit(50, 60))])
 def get_statuses(user_id: UUID, db: Annotated[Session, Depends(get_db)]):
     try:

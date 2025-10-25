@@ -16,7 +16,7 @@ VERIFY_TOKEN = setting.verify_token
 APP_SECRET = setting.app_secret
 
 
-@router.get("/", dependencies=[Depends(get_rate_limit(50, 60))])
+@router.get("", dependencies=[Depends(get_rate_limit(50, 60))])
 async def verify_webhook(request: Request):
     """
     Webhook verification for WhatsApp Business API.
@@ -39,7 +39,7 @@ async def verify_webhook(request: Request):
         return JSONResponse(content={"error": "Internal server error"}, status_code=500)
 
 
-@router.post("/", dependencies=[Depends(get_rate_limit(50, 60))])
+@router.post("", dependencies=[Depends(get_rate_limit(50, 60))])
 async def receive_webhook(request: Request):
     """
     Handles incoming messages from WhatsApp.
