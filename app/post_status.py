@@ -1,5 +1,4 @@
 import logging
-import pyautogui
 from time import sleep
 from .whatsapp_utils import select_clickable_element, type_text
 
@@ -10,6 +9,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+try:
+    import pyautogui
+except Exception as e:
+    pyautogui = None
+    logger.warning("PyAutoGUI disabled in headless environment: %s", e)
 
 def send_status_texts(write_ups, phone, country, browser, wait):
     try:
