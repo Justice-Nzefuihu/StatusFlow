@@ -3,9 +3,11 @@
     "data_api_version": "3.0",
     "routing_model": {
         "SIGN_UP": [
-            "TERMS_AND_CONDITIONS"
+            "TERMS_AND_CONDITIONS",
+            "ERROR"
         ],
-        "TERMS_AND_CONDITIONS": []
+        "TERMS_AND_CONDITIONS": [],
+        "ERROR": []
     },
     "screens": [
         {
@@ -56,7 +58,7 @@
                             },
                             {
                                 "type": "Footer",
-                                "label": "Continue",
+                                "label": "Register",
                                 "on-click-action": {
                                     "name": "data_exchange",
                                     "payload": {
@@ -73,7 +75,7 @@
         },
         {
             "id": "TERMS_AND_CONDITIONS",
-            "title": "Terms and conditions",
+            "title": "Terms and Conditions",
             "data": {},
             "layout": {
                 "type": "SingleColumnLayout",
@@ -97,6 +99,25 @@
                     {
                         "type": "TextBody",
                         "text": "We respect your privacy. We implement strict security measures to protect your data from unauthorized access. We do not share your personal data except with trusted service providers or when required by law. You have the right to access, update, or delete your data at any time. By using this app, you consent to the described data practices."
+                    }
+                ]
+            }
+        },
+        {
+            "id": "ERROR",
+            "title": "Error",
+            "data": {
+                "error_mssg": {
+                    "type": "string",
+                    "__example__": "Phone number already exists."
+                }
+            },
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "RichText",
+                        "text": "${data.error_mssg}"
                     }
                 ]
             }

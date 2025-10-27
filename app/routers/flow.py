@@ -75,23 +75,29 @@ async def receive_whatsapp_flow(request: Request):
                 async with httpx.AsyncClient() as client:
                     USER_ENDPOINT = os.getenv("USER_ENDPOINT", "http://localhost:8000/user")
                     forward_response = await client.post(USER_ENDPOINT, json=data)
+
                     if forward_response.status_code >= 400:
-                        raise HTTPException(
-                            status.HTTP_400_BAD_REQUEST,
-                            detail=f"Internal forward failed: {forward_response.text}"
-                        )
-                    
-                    response_data = forward_response.json()
-                    plaintext_response = {
-                        "screen": "SUCCESS",
-                        "data": {
-                            "extension_message_response": {
-                                "params": {
-                                    "flow_token": flow_token
+                        response_data = {
+                            "error_mssg":forward_response.json().get("detail", "Unknown error occurred.")
+                            }
+                        plaintext_response = {
+                            "screen": "ERROR",
+                            "data": response_data,
+                            "flow_token": flow_token,
+                            "version": version
+                        }
+                    else:
+                        response_data = forward_response.json()
+                        plaintext_response = {
+                            "screen": "SUCCESS",
+                            "data": {
+                                "extension_message_response": {
+                                    "params": {
+                                        "flow_token": flow_token
+                                    }
                                 }
                             }
                         }
-                    }
 
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported action: {action}")
