@@ -1,13 +1,12 @@
 import os
 from cryptography.fernet import Fernet, InvalidToken
 from .config import setting
-import base64
 import json
 from dotenv import load_dotenv
-from Crypto.Cipher import AES, PKCS1_OAEP
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad
+from base64 import b64decode, b64encode
+from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1, hashes
+from cryptography.hazmat.primitives.ciphers import algorithms, Cipher, modes
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 
 from app.logging_config import get_logger
@@ -89,57 +88,39 @@ def decrypt_file(encrypted_path: str, output_path: str = None, remove_original: 
         logger.error(f"Unexpected decryption error: {e}", exc_info=True)
         raise
 
-def get_private_key():
-    private_key_str = os.getenv("PRIVATE_KEY")
-    if not private_key_str:
-        raise ValueError("PRIVATE_KEY not found in environment variables.")
-    
-    return RSA.import_key(private_key_str)
+def decrypt_request(encrypted_data: dict):
+    encrypted_aes_key = b64decode(encrypted_data["encrypted_aes_key"])
+    initial_vector = b64decode(encrypted_data["initial_vector"])
+    encrypted_flow_data = b64decode(encrypted_data["encrypted_flow_data"])
 
-def get_public_key():
-    public_key_str = os.getenv("PUBLIC_KEY")
-    if not public_key_str:
-        raise ValueError("PUBLIC_KEY not found in environment variables.")
-    
-    return RSA.import_key(public_key_str)
+    # Decrypt the AES encryption key
+    private_key = os.getenv("PRIVATE_KEY")
+    private_key = load_pem_private_key(
+        private_key.encode('utf-8'), password=None)
+    aes_key = private_key.decrypt(encrypted_aes_key, OAEP(
+        mgf=MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
 
-def decrypt_flow_payload(encrypted_data: dict) -> dict:
-    private_key = get_private_key()
-    
-    encrypted_aes_key = base64.b64decode(encrypted_data["encrypted_aes_key"])
-    initial_vector = base64.b64decode(encrypted_data["initial_vector"])
-    encrypted_flow_data = base64.b64decode(encrypted_data["encrypted_flow_data"])
+    # Decrypt the Flow data
+    encrypted_flow_data_body = encrypted_flow_data[:-16]
+    encrypted_flow_data_tag = encrypted_flow_data[-16:]
+    decryptor = Cipher(algorithms.AES(aes_key),
+                       modes.GCM(initial_vector, encrypted_flow_data_tag)).decryptor()
+    decrypted_data_bytes = decryptor.update(
+        encrypted_flow_data_body) + decryptor.finalize()
+    decrypted_data = json.loads(decrypted_data_bytes.decode("utf-8"))
+    return decrypted_data, aes_key, initial_vector
 
-    # RSA decrypt AES key
-    rsa_cipher = PKCS1_OAEP.new(private_key)
-    aes_key = rsa_cipher.decrypt(encrypted_aes_key)
+def encrypt_response(response, aes_key, iv):
+    # Flip the initialization vector
+    flipped_iv = bytearray()
+    for byte in iv:
+        flipped_iv.append(byte ^ 0xFF)
 
-    # AES decrypt flow data
-    aes_cipher = AES.new(aes_key, AES.MODE_CBC, iv=initial_vector)
-    decrypted_data = aes_cipher.decrypt(encrypted_flow_data)
-
-    # Strip null padding and parse JSON
-    decrypted_json = decrypted_data.rstrip(b"\0").decode("utf-8").strip()
-    return json.loads(decrypted_json)
-
-def encrypt_flow_response(response_data: dict):
-    """
-    Encrypts the response that will be sent back to WhatsApp.
-    """
-    public_key = get_public_key()
-    aes_key = get_random_bytes(32)
-    iv = get_random_bytes(16)
-
-    # Encrypt response data with AES
-    cipher_aes = AES.new(aes_key, AES.MODE_CBC, iv)
-    encrypted_data = cipher_aes.encrypt(pad(json.dumps(response_data).encode(), AES.block_size))
-
-    # Encrypt AES key with public RSA key
-    cipher_rsa = PKCS1_OAEP.new(public_key)
-    encrypted_aes_key = cipher_rsa.encrypt(aes_key)
-
-    return {
-        "encrypted_flow_data": base64.b64encode(encrypted_data).decode(),
-        "encrypted_aes_key": base64.b64encode(encrypted_aes_key).decode(),
-        "initial_vector": base64.b64encode(iv).decode()
-    }
+    # Encrypt the response data
+    encryptor = Cipher(algorithms.AES(aes_key),
+                       modes.GCM(flipped_iv)).encryptor()
+    return b64encode(
+        encryptor.update(json.dumps(response).encode("utf-8")) +
+        encryptor.finalize() +
+        encryptor.tag
+    ).decode("utf-8")

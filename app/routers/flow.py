@@ -5,7 +5,7 @@ import os
 import json
 from dotenv import load_dotenv
 
-from app.crypto import decrypt_flow_payload, encrypt_flow_response
+from app.crypto import decrypt_request, encrypt_response
 
 load_dotenv()
 
@@ -19,7 +19,7 @@ async def receive_whatsapp_flow(request: Request):
     """
     try:
         encrypted_body = await request.json()
-        payload = decrypt_flow_payload(encrypted_body)
+        payload, aes_key, iv = decrypt_request(encrypted_body)
 
         print("Decrypted WhatsApp flow data:", json.dumps(payload, indent=2))
 
@@ -81,7 +81,7 @@ async def receive_whatsapp_flow(request: Request):
         }
 
         # Encrypt before returning
-        encrypted_response = encrypt_flow_response(plaintext_response)
+        encrypted_response = encrypt_response(plaintext_response, aes_key, iv)
 
         print(" Encrypted response ready for WhatsApp.")
 
