@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pytz
 from email.mime.text import MIMEText
 import smtplib
+from dotenv import load_dotenv
 
 from celery import chain
 from .celery_app import celery_app
@@ -21,6 +22,8 @@ from .gdrive import (
 from app.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+load_dotenv()
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 

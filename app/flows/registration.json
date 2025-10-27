@@ -1,0 +1,105 @@
+{
+    "version": "7.2",
+    "data_api_version": "3.0",
+    "routing_model": {
+        "SIGN_UP": [
+            "TERMS_AND_CONDITIONS"
+        ],
+        "TERMS_AND_CONDITIONS": []
+    },
+    "screens": [
+        {
+            "id": "SIGN_UP",
+            "title": "StatusFlow Registration",
+            "terminal": true,
+            "success": true,
+            "data": {},
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "sign_up_form",
+                        "children": [
+                            {
+                                "type": "TextInput",
+                                "required": true,
+                                "label": "Phone number",
+                                "helper-text": "Must be in international format. Eg: +234907000000",
+                                "name": "phone",
+                                "max-chars": 20,
+                                "input-type": "number",
+                                "pattern": "^\\+[1-9]\\d{7,14}$"
+                            },
+                            {
+                                "type": "TextInput",
+                                "required": true,
+                                "label": "Country",
+                                "helper-text": "Match with phone number country code. Eg: Nigeria which matches +234",
+                                "name": "country",
+                                "max-chars": 50,
+                                "input-type": "text"
+                            },
+                            {
+                                "type": "OptIn",
+                                "name": "terms_agreement",
+                                "label": "I agree with the terms.",
+                                "required": true,
+                                "on-click-action": {
+                                    "name": "navigate",
+                                    "next": {
+                                        "type": "screen",
+                                        "name": "TERMS_AND_CONDITIONS"
+                                    },
+                                    "payload": {}
+                                }
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Continue",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "phone": "${form.phone}",
+                                        "country": "${form.country}",
+                                        "terms_agreement": "${form.terms_agreement}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "TERMS_AND_CONDITIONS",
+            "title": "Terms and conditions",
+            "data": {},
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "TextHeading",
+                        "text": "Our Terms"
+                    },
+                    {
+                        "type": "TextSubheading",
+                        "text": "Data usage"
+                    },
+                    {
+                        "type": "TextBody",
+                        "text": "We collect only essential data such as your phone number, country, and media files you upload. This is used to maintain your WhatsApp session, upload statuses, and provide requested services. We do NOT read your chats, sell your data, or use it for advertising. Session data is stored on the cloud or encrypted for security."
+                    },
+                    {
+                        "type": "TextSubheading",
+                        "text": "Privacy Policy"
+                    },
+                    {
+                        "type": "TextBody",
+                        "text": "We respect your privacy. We implement strict security measures to protect your data from unauthorized access. We do not share your personal data except with trusted service providers or when required by law. You have the right to access, update, or delete your data at any time. By using this app, you consent to the described data practices."
+                    }
+                ]
+            }
+        }
+    ]
+}

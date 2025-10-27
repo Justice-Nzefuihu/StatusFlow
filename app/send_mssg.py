@@ -1,25 +1,26 @@
-import requests
-from config import setting
+# import os
+# import requests
+# from config import setting
 
-ACCESS_TOKEN = setting.access_token
-PHONE_NUMBER_ID = setting.phone_number_id
-RECIPIENT_PHONE = "2349043262304"
+# ACCESS_TOKEN = setting.access_token
+# PHONE_NUMBER_ID = setting.phone_number_id
+# RECIPIENT_PHONE = "2349043262304"
 
-url = "https://graph.facebook.com/v22.0/753045567890417/messages"
+# url = "https://graph.facebook.com/v22.0/753045567890417/messages"
 
-headers = {
-    "Authorization": f"Bearer {ACCESS_TOKEN}",
-    "Content-Type": "application/json"
-}
+# headers = {
+#     "Authorization": f"Bearer {ACCESS_TOKEN}",
+#     "Content-Type": "application/json"
+# }
 
-data = {
-    "messaging_product": "whatsapp",
-    "to": RECIPIENT_PHONE,
-    "type": "text",
-    "text": {
-        "body": "Hello! This is a test message from WhatsApp API."
-    }
-}
+# data = {
+#     "messaging_product": "whatsapp",
+#     "to": RECIPIENT_PHONE,
+#     "type": "text",
+#     "text": {
+#         "body": "Hello! This is a test message from WhatsApp API."
+#     }
+# }
 
 # try:
 #     response = requests.post(url, headers=headers, json=data)

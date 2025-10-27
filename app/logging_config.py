@@ -1,8 +1,9 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from dotenv import load_dotenv
 
-
+load_dotenv()
 
 class CeleryEmailHandler(logging.Handler):
     """Custom logging handler that sends error logs via Celery email task."""
