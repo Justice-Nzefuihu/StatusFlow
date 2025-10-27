@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 import os
 
-from .routers import webhook, user, status
+from .routers import flow, webhook, user, status
 from .model import UserDB
 from .database import get_db
 from app.middlewares import LoadBalancerMiddleware, CeleryQueueMiddleware, init_rate_limiter
@@ -91,6 +91,7 @@ try:
     app.include_router(webhook.router)
     app.include_router(user.router)
     app.include_router(status.router)
+    app.include_router(flow.router)
     logger.info("Routers registered successfully")
 except Exception as e:
     logger.error(f"Error including routers: {e}", exc_info=True)
