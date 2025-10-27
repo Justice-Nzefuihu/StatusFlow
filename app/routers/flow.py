@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import PlainTextResponse
 import httpx
 import os
 import json
@@ -89,7 +89,7 @@ async def receive_whatsapp_flow(request: Request):
 
         print(" Encrypted response ready for WhatsApp.")
 
-        return JSONResponse(content=encrypted_response)
+        return PlainTextResponse(content=encrypted_response)
 
     except Exception as e:
         print(" Error processing flow:", e)
