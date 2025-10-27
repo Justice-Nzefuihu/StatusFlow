@@ -40,7 +40,10 @@ async def receive_whatsapp_flow(request: Request):
 
         elif action == "ping":
             print("Health Checking")
-            response_data = {"status": "pong"}
+            response_data = {"status": "active"}
+            plaintext_response = {
+                "data": response_data
+            }
 
         # Handle BACK: navigate to previous screen
         elif action == "BACK":
@@ -49,6 +52,12 @@ async def receive_whatsapp_flow(request: Request):
             if screen == "TERMS_AND_CONDITIONS":
                 next_screen = "SIGN_UP"
             response_data = {"message": f"Returned to {next_screen}."}
+            plaintext_response = {
+                "screen": next_screen,
+                "data": response_data,
+                "flow_token": flow_token,
+                "version": version
+            }
 
         # Handle DATA_EXCHANGE (form submission)
         elif action == "data_exchange":
@@ -71,18 +80,21 @@ async def receive_whatsapp_flow(request: Request):
                             status.HTTP_400_BAD_REQUEST,
                             detail=f"Internal forward failed: {forward_response.text}"
                         )
+                    
                     response_data = forward_response.json()
+                    plaintext_response = {
+                        "screen": "SUCCESS",
+                        "data": {
+                            "extension_message_response": {
+                                "params": {
+                                    "flow_token": flow_token
+                                }
+                            }
+                        }
+                    }
 
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported action: {action}")
-
-        # # Prepare plaintext response for encryption
-        plaintext_response = {
-            # "screen": next_screen,
-            "data": response_data,
-            # "flow_token": flow_token,
-            # "version": version
-        }
 
         # Encrypt before returning
         encrypted_response = encrypt_response(plaintext_response, aes_key, iv)
