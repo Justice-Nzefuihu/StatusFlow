@@ -85,7 +85,7 @@ async def receive_whatsapp_flow(request: Request):
         }
 
         # Encrypt before returning
-        encrypted_response = encrypt_response(response_data, aes_key, iv)
+        encrypted_response = encrypt_response(plaintext_response, aes_key, iv)
 
         print(" Encrypted response ready for WhatsApp.")
 
