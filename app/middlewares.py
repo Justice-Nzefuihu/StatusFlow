@@ -65,7 +65,7 @@ async def init_rate_limiter(redis_urls=None):
             decode_responses=True,
         )
         await FastAPILimiter.init(redis)
-        logger.info(f" Distributed rate limiter initialized with nodes: {setting.redis_url}")
+        logger.info(" Distributed rate limiter initialized with nodes")
         return redis
     except Exception as e:
         logger.error(f" Failed to initialize Redis cluster: {e}")

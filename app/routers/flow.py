@@ -38,6 +38,9 @@ async def receive_whatsapp_flow(request: Request):
             print("Flow initialized, no action required.")
             response_data = {"message": "Flow started successfully."}
 
+        elif action == "ping":
+            response_data = {"status": "pong"}
+
         # Handle BACK: navigate to previous screen
         elif action == "BACK":
             print("User pressed BACK from:", screen)
