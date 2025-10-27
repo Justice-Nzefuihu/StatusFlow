@@ -77,12 +77,12 @@ async def receive_whatsapp_flow(request: Request):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported action: {action}")
 
         # # Prepare plaintext response for encryption
-        # plaintext_response = {
-        #     "screen": next_screen,
-        #     "data": response_data,
-        #     "flow_token": flow_token,
-        #     "version": version
-        # }
+        plaintext_response = {
+            # "screen": next_screen,
+            "data": response_data,
+            # "flow_token": flow_token,
+            # "version": version
+        }
 
         # Encrypt before returning
         encrypted_response = encrypt_response(response_data, aes_key, iv)
