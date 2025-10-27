@@ -97,7 +97,7 @@ def decrypt_request(encrypted_data: dict):
     private_key = os.getenv("PRIVATE_KEY")
     key_password = os.getenv("KEY_PASSWORD")
     private_key = load_pem_private_key(
-        private_key.encode('utf-8'), password=key_password)
+        private_key.encode('utf-8'), password=key_password.encode('utf-8'))
     aes_key = private_key.decrypt(encrypted_aes_key, OAEP(
         mgf=MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
 
