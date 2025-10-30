@@ -127,8 +127,8 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
             now = datetime.now()
             start_time = (now - timedelta(minutes=5)).time()
             end_time = (now + timedelta(minutes=35)).time()
-            days_diff = (now.date() - status["created_at"].date()).days
-            is_within_window = start_time <= datetime.fromisoformat(status["schedule_time"]).time() <= end_time
+            days_diff = (now.date() - datetime.fromisoformat(str(status["created_at"])).date()).days
+            is_within_window = start_time <= datetime.fromisoformat(str(status["schedule_time"])).time() <= end_time
 
             is_enabled = not ((is_due_by_schedule(status["schedule"], days_diff) or days_diff == 1)
                               and is_within_window and not status["is_upload"])
@@ -274,7 +274,7 @@ async def receive_whatsapp_flow(request: Request):
     try:
         encrypted_body = await request.json()
         payload, aes_key, iv = decrypt_request(encrypted_body)
-        logger.info("Received WhatsApp flow")
+        logger.info("Received WhatsApp flow.")
 
         action = payload.get("action")
         screen = payload.get("screen")
