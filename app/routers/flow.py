@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import PlainTextResponse
-import httpx, os, json, base64
+import httpx
+import os
+import json
+import base64
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -168,20 +171,23 @@ async def handle_add_status_screen(data, phone_number, flow_token, version):
         STATUS_ENDPOINT = os.getenv("STATUS_ENDPOINT", "http://localhost:8000/status")
         ADD_STATUS_ENDPOINT = f"{STATUS_ENDPOINT}/{phone_number}"
 
-        if not data.get("is_text") and data.get("image"):
-            photo_picker = data["image"][0]
-            data["image_path"] = photo_picker.get("file_name")
-            data["image"] = decrypt_whatsapp_media(photo_picker)
+        image_list = data.get("image")
+        is_text = bool(data.get("is_text"))
+
+        if not is_text:
+            if image_list and len(image_list) > 0:
+                photo_picker = image_list[0]
+                data["image_path"] = photo_picker.get("file_name")
+                data["image"] = decrypt_whatsapp_media(photo_picker)
         else:
-            if data.get("is_text") and data.get("image"):
-                if len(data["image"]) == 0:
-                    del data["image"]
-                else:
-                    return get_error_screen({"detail", "Please cancel image or unselect only_text."}, flow_token, version)
+            if not image_list:
+                data.pop("image", None)
+            else:
+                return get_error_screen({"detail", "Please cancel image or unselect only_text."}, flow_token, version)
 
         forward_response = await client.post(ADD_STATUS_ENDPOINT, json=data)
         if forward_response.status_code >= 400:
-            return get_error_screen(forward_response.json().get("detail", "Failed to add status."), flow_token, version)
+            return get_error_screen({"detail", "Failed to add status."}, flow_token, version)
 
         return get_next_screen("COMPLETE", forward_response.json(), flow_token, version)
 
@@ -206,7 +212,7 @@ async def handle_status_details_screen(data, phone_number, flow_token, version):
         data["id"] = id
         return await handle_add_status_screen(data, phone_number, flow_token, version)
     else: 
-        del data["Choose_an_action_for_detail"]
+        data.pop("Choose_an_action_for_detail", None)
         plaintext_response = get_next_screen("UPDATE", data, flow_token, version)
 
     return plaintext_response

@@ -226,7 +226,7 @@
                     "write_up": "${form.Write_up}",
                     "is_text": "${form.Only_Text}",
                     "schedule": "${form.Schedule}",
-                    "Schedule_time": "${form.Schedule_time}"
+                    "schedule_time": "${form.Schedule_time}"
                   }
                 },
                 "type": "Footer"
@@ -644,8 +644,8 @@
                   "payload": {
                     "status_id": "${data.id}",
                     "Write_up": "${form.Write_up}",
-                    "Schedule": "${form.Schedule}",
-                    "Schedule_time": "${form.Schedule_time}"
+                    "schedule": "${form.Schedule}",
+                    "schedule_time": "${form.Schedule_time}"
                   }
                 },
                 "type": "Footer"
@@ -729,14 +729,6 @@
               {
                 "type": "TextSubheading",
                 "text": "${data.mssg}"
-              },
-              {
-                "type": "Footer",
-                "label": "Done",
-                "on-click-action": {
-                  "name": "data_exchange",
-                  "payload": {}
-                }
               }
             ]
           }
