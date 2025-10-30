@@ -29,12 +29,12 @@ def encode_image_base64(path: str | None) -> str | None:
     """Read image from file path and return as base64 string."""
     try:
         if not path or not Path(path).exists():
-            return None
+            return ""
         with open(path, "rb") as img:
             return base64.b64encode(img.read()).decode("utf-8")
     except Exception as e:
         logger.error(f"Failed to encode image at {path}: {e}")
-        return None
+        return ""
 
 
 def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:

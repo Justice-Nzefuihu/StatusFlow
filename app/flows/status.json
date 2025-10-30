@@ -285,7 +285,7 @@
                 "metadata": "created_at: 2025-10-28T13:10:00"
               },
               "start": {
-                "image": "/9j/4AAQSkZJRgABAQAAAQABAAD…"
+                "image": null
               },
               "on-click-action": {
                 "name": "navigate",
