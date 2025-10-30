@@ -153,7 +153,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
             days_diff = (now.date() - datetime.fromisoformat(str(status["created_at"])).date()).days
             is_within_window = start_time <= time.fromisoformat(str(status["schedule_time"])) <= end_time
 
-            is_enabled = not ((is_due_by_schedule(status["schedule"], days_diff) or days_diff == 1)
+            is_enabled = ((is_due_by_schedule(status["schedule"], days_diff) or days_diff == 1)
                               and is_within_window and not status["is_upload"])
 
             if is_view:
