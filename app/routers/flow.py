@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import PlainTextResponse
 import httpx
 import os
-import json
 import base64
 from dotenv import load_dotenv
 from pathlib import Path
@@ -192,6 +191,13 @@ async def handle_add_status_screen(data, phone_number, flow_token, version):
             photo_picker = data["image"][0]
             data["image_path"] = photo_picker.get("file_name")
             data["image"] = decrypt_whatsapp_media(photo_picker)
+        else:
+            if data.get("is_text") and len(data.get("image")) > 0:
+                logger.warning("Failed to add status: did not remove image or unselect Only text")
+                return get_error_screen("Please reomve image or unselect Only text.", flow_token, version)
+            else:
+                del data["image"]
+
 
         async with httpx.AsyncClient() as client:
             forward_response = await client.post(ADD_STATUS_ENDPOINT, json=data)
@@ -222,7 +228,7 @@ async def receive_whatsapp_flow(request: Request):
     try:
         encrypted_body = await request.json()
         payload, aes_key, iv = decrypt_request(encrypted_body)
-        logger.info(f"Received WhatsApp flow: {json.dumps(payload, indent=2)}")
+        # logger.info(f"Received WhatsApp flow: {json.dumps(payload, indent=2)}")
 
         action = payload.get("action")
         screen = payload.get("screen")

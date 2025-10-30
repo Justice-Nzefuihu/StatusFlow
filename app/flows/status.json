@@ -4,7 +4,8 @@
     "INDEX": [
       "ADD_STATUS",
       "VIEW_STATUS",
-      "DELETE_STATUS"
+      "DELETE_STATUS",
+      "NO_DATA"
     ],
     "ADD_STATUS": [
       "COMPLETE",
@@ -12,7 +13,6 @@
     ],
     "VIEW_STATUS": [
       "STATUS_DETAILS",
-      "NO_DATA",
       "ERROR"
     ],
     "DELETE_STATUS": [

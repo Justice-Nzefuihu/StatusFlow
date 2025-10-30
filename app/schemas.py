@@ -28,7 +28,7 @@ class StatusBase(BaseModel):
     schedule_time: time
 
 class StatusCreate(StatusBase):
-    image: str
+    image: str | None = None
     images_path: str | None = None
     is_text: bool = False
 
