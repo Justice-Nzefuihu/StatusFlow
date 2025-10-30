@@ -161,8 +161,8 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                     "id": status["id"],
                     "main-content": {
                         "title": write_up,
-                        "description": f"Schedule: {schedule} @{schedule_time})",
-                        "metadata": f"created_at: {created_at}"
+                        "description": f"{schedule} @{schedule_time}",
+                        "metadata": f"{created_at}"
                     },
                     "start": {"image": image},
                     "on-click-action": {
@@ -170,7 +170,8 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                         "next": {"name": "STATUS_DETAILS", "type": "screen"},
                         "payload": {
                             "id": status["id"],
-                            "Write_up": status["write_up"],
+                            "write_up": status["write_up"],
+                            "is_text": status["is_text"],
                             "type": "Type: Text Status" if status["is_text"] else "Type: Image Status",
                             "image": image,
                             "schedule": f"Schedule: {status['schedule']} ({status['schedule_time']})",
@@ -184,8 +185,8 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                 status_dict = {
                     "id": status["id"],
                     "title": write_up,
-                    "description": f"Schedule: {schedule} @{schedule_time})",
-                    "metadata": f"created_at: {created_at}",
+                    "description": f"{schedule} @{schedule_time}",
+                    "metadata": f"{created_at}",
                     "enabled": is_enabled,
                     "image": image
                 }
