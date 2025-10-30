@@ -30,3 +30,7 @@ async def block_request(request: Request, call_back):
         status_code=status.HTTP_403_FORBIDDEN, 
         detail="Forbidden"
         )
+
+@app.get("")
+def home():
+    return {"status": "Ok"}

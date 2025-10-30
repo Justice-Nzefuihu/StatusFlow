@@ -1,0 +1,748 @@
+{
+  "data_api_version": "3.0",
+  "routing_model": {
+    "INDEX": [
+      "ADD_STATUS",
+      "VIEW_STATUS",
+      "DELETE_STATUS"
+    ],
+    "ADD_STATUS": [
+      "COMPLETE",
+      "ERROR"
+    ],
+    "VIEW_STATUS": [
+      "STATUS_DETAILS",
+      "NO_DATA",
+      "ERROR"
+    ],
+    "DELETE_STATUS": [
+      "COMPLETE",
+      "ERROR"
+    ],
+    "STATUS_DETAILS": [
+      "UPDATE"
+    ],
+    "UPDATE": [
+      "COMPLETE",
+      "ERROR"
+    ],
+    "ERROR": [],
+    "COMPLETE": [],
+    "NO_DATA": []
+  },
+  "screens": [
+    {
+      "id": "INDEX",
+      "title": "StatusFlow",
+      "data": {
+        "Choose_an_action": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "main-content": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "ADD_STATUS",
+              "main-content": {
+                "title": "Add Status"
+              },
+              "on-click-action": {
+                "name": "navigate",
+                "next": {
+                  "name": "ADD_STATUS",
+                  "type": "screen"
+                },
+                "payload": {}
+              }
+            },
+            {
+              "id": "VIEW_STATUS",
+              "main-content": {
+                "title": "Get Status"
+              },
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "action": "Get Status",
+                  "selected": "View"
+                }
+              }
+            },
+            {
+              "id": "DELETE_STATUS",
+              "main-content": {
+                "title": "Delete Status"
+              },
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "action": "Get Status",
+                  "selected": "Delete"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "NavigationList",
+            "name": "Choose_an_action",
+            "list-items": "${data.Choose_an_action}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ADD_STATUS",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "type": "PhotoPicker",
+                "name": "photo_picker",
+                "label": "Upload photos",
+                "description": "Please attach images if not only text status",
+                "photo-source": "camera_gallery",
+                "min-uploaded-photos": 1,
+                "max-uploaded-photos": 1,
+                "max-file-size-kb": 10240,
+                "enabled": "`(${form.Only_Text} != true)`"
+              },
+              {
+                "label": "Write up",
+                "name": "Write_up",
+                "required": "${form.Only_Text}",
+                "type": "TextArea"
+              },
+              {
+                "label": "Only Text",
+                "name": "Only_Text",
+                "required": false,
+                "type": "OptIn"
+              },
+              {
+                "type": "Dropdown",
+                "label": "Schedule",
+                "required": true,
+                "name": "Schedule",
+                "data-source": [
+                  {
+                    "id": "EVERYDAY",
+                    "title": "Every Day"
+                  },
+                  {
+                    "id": "EVERY_2_DAYS",
+                    "title": "Every 2 Days"
+                  },
+                  {
+                    "id": "EVERY_3_DAYS",
+                    "title": "Every 3 Days"
+                  },
+                  {
+                    "id": "EVERY_4_DAYS",
+                    "title": "Every 4 Days"
+                  },
+                  {
+                    "id": "EVERY_5_DAYS",
+                    "title": "Every 5 Days"
+                  },
+                  {
+                    "id": "EVERY_6_DAYS",
+                    "title": "Every 6 Days"
+                  },
+                  {
+                      "id": "EVERY_WEEK",
+                      "title": "Every Week"
+                    },
+                    {
+                      "id": "EVERY_10_DAYS",
+                      "title": "Every 10 Days"
+                    },
+                    {
+                      "id": "EVERY_2_WEEK",
+                      "title": "Every 2 Week"
+                    }
+                ]
+              },
+              {
+                "type": "Dropdown",
+                "label": "Schedule time",
+                "required": true,
+                "name": "Schedule_time",
+                "data-source": [
+                  {
+                    "id": "7:00:00",
+                    "title": "7:00AM"
+                  },
+                  {
+                    "id": "8:00:00",
+                    "title": "8:00AM"
+                  },
+                  {
+                    "id": "9:00:00",
+                    "title": "9:00AM"
+                  },
+                  {
+                    "id": "10:00:00",
+                    "title": "10:00AM"
+                  },
+                  {
+                    "id": "11:00:00",
+                    "title": "11:00AM"
+                  },
+                  {
+                    "id": "12:00:00",
+                    "title": "12:00PM"
+                  },
+                  {
+                    "id": "13:00:00",
+                    "title": "1:00PM"
+                  }
+                ]
+              },
+              {
+                "label": "Add",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "image": "${form.photo_picker}",
+                    "write_up": "${form.Write_up}",
+                    "is_text": "${form.Only_Text}",
+                    "schedule": "${form.Schedule}",
+                    "time": "${form.Schedule_time}"
+                  }
+                },
+                "type": "Footer"
+              }
+            ],
+            "name": "add_status_form",
+            "type": "Form"
+          }
+        ],
+        "type": "SingleColumnLayout"
+      },
+      "title": "Add Status"
+    },
+    {
+      "id": "VIEW_STATUS",
+      "title": "View Status",
+      "data": {
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "main-content": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "discription": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "type": "string"
+                  }
+                }
+              },
+              "start": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "b9a7b7f8-1234-4c6e-b001-abcde12345f6",
+              "main-content": {
+                "title": "Morning update",
+                "description": "Schedule: 07:00 AM (Everyday)",
+                "metadata": "created_at: 2025-10-28T13:10:00"
+              },
+              "start": {
+                "image": "/9j/4AAQSkZJRgABAQAAAQABAAD…"
+              },
+              "on-click-action": {
+                "name": "navigate",
+                "next":{
+                    "name":"STATUS_DETAILS",
+                    "type":"screen"
+                },
+                "payload": {
+                  "id": "b9a7b7f8-1234-4c6e-b001-abcde12345f6",
+                  "Write_up": "Morning vibes 🌅",
+                  "type": "Type: Text Status",
+                  "image": "/9j/4AAQSkZJRgABAQAAAQABAAD…",
+                  "schedule":  "Schedule: EVERYDAY at 07:00 AM",
+                  "is_upload":  "Uploaded: Yes",
+                  "created_at": "Created At: 2025-10-28 at 11:43:10",
+                  "upload_window_active": true
+                }
+              }
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "view_status_form",
+            "children": [
+              {
+                "type": "NavigationList",
+                "name": "status",
+                "label": "Status List",
+                "description": "Choose your preferred Status to view",
+                "list-items": "${data.statuses}"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "DELETE_STATUS",
+      "title": "Delete Status",
+      "data": {
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "discription": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "string"
+              },
+              "image": {
+                "type": "string"
+              }
+            }
+          },
+          "__example__": [
+            {
+              "id": "b9a7b7f8-1234-4c6e-b001-abcde12345f6",
+              "title": "Morning update",
+              "description": "Schedule: 07:00 AM (Everyday)",
+              "metadata": "created_at: 2025-10-28T13:10:00",
+              "enabled": false,
+              "image": "/9j/4AAQSkZJRgABAQAAAQABAAD…"
+            }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "delete_status_form",
+            "children": [
+              {
+                "type": "CheckboxGroup",
+                "name": "delete_status",
+                "label": "Delete Status",
+                "description": "Choose your preferred Status to Delete (Status within its upload time can't be deleted)",
+                "required": true,
+                "data-source": "${data.statuses}"
+              },
+              {
+                "type": "Footer",
+                "label": "Delete",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "selected_status": "${form.delete_status}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "data": {
+        "id": {
+          "type": "string",
+          "__example__": "0e0e4e2b-8d52-4b4e-9f83-31adfb90dc33"
+        },
+        "write_up": {
+          "type": "string",
+          "__example__": "Morning vibes 🌅"
+        },
+        "type": {
+          "type": "string",
+          "__example__": "Type: Text Status"
+        },
+        "is_text": {
+          "type": "boolean",
+          "__example__": true
+        },
+        "image": {
+          "type": "string",
+          "__example__": "https://storage.googleapis.com/statusflow/status1.jpg"
+        },
+        "schedule": {
+          "type": "string",
+          "__example__": "Schedule: EVERYDAY at 07:00 AM"
+        },
+        "is_upload": {
+          "type": "string",
+          "__example__": "Uploaded: Yes"
+        },
+        "created_at": {
+          "type": "string",
+          "__example__": "Created At: 2025-10-28 at 11:43:10"
+        },
+        "upload_window_active": {
+          "type": "boolean",
+          "__example__": false
+        }
+      },
+      "id": "STATUS_DETAILS",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Your Status Details"
+          },
+          {
+            "type": "Image",
+            "visible": "`${data.is_text == false}`",
+            "src": "${data.image}",
+            "alt-text": "Status image"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Write Up"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.write_up}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.type}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.created_at}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.schedule}"
+          },
+          {
+            "type": "TextBody",
+            "text": "${data.is_upload}"
+          },
+          {
+            "type": "Form",
+            "name": "Choose_an_action_for_detail_form",
+            "children": [
+                {
+            "type": "If",
+            "condition": "(!${data.upload_window_active})",
+            "then": [
+              {
+                "data-source": [
+                  {
+                    "id": "Delete",
+                    "title": "Delete"
+                  },
+                  {
+                    "id": "Update",
+                    "title": "Update"
+                  }
+                ],
+                "label": "Choose an action",
+                "name": "Choose_an_action_for_detail",
+                "description": "Can't update/delete when it is within the upload time",
+                "required": true,
+                "type": "RadioButtonsGroup"
+              },
+              {
+                "type": "Footer",
+                "label": "confirm",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "Choose_an_action_for_detail": "${form.Choose_an_action_for_detail}",
+                    "status_id": "${data.id}",
+                    "id": "${data.id}",
+                    "Write_up": "${data.write_up}",
+                            "type": "${data.type}",
+                            "image": "${data.image}",
+                            "schedule": "${data.schedule}",
+                            "is_upload": "${data.is_upload}",
+                            "created_at": "${data.created_at}",
+                            "upload_window_active": "${data.upload_window_active}"
+                  }
+                }
+              }
+            ]
+          }
+            ]
+          }
+        ]
+      },
+      "title": "Status Details"
+    },
+    {
+      "data": {
+        "id": {
+          "type": "string",
+          "__example__": "0e0e4e2b-8d52-4b4e-9f83-31adfb90dc33"
+        },
+        "write_up": {
+          "type": "string",
+          "__example__": "Morning vibes 🌅"
+        },
+        "type": {
+          "type": "string",
+          "__example__": "Type: Text Status"
+        },
+        "is_text": {
+          "type": "boolean",
+          "__example__": true
+        },
+        "images_path": {
+          "type": "string",
+          "__example__": "https://storage.googleapis.com/statusflow/status1.jpg"
+        },
+        "schedule": {
+          "type": "string",
+          "__example__": "Everyday"
+        },
+        "schedule_time": {
+          "type": "string",
+          "__example__": "7:00AM"
+        },
+        "is_upload": {
+          "type": "string",
+          "__example__": "Uploaded: Yes"
+        },
+        "created_at": {
+          "type": "string",
+          "__example__": "Created At: 2025-10-28 at 11:43:10"
+        },
+        "upload_window_active": {
+          "type": "boolean",
+          "__example__": false
+        }
+      },
+      "id": "UPDATE",
+      "layout": {
+        "children": [
+          {
+            "init-values": {
+              "Write_up": "${data.write_up}",
+              "Schedule": "${data.schedule}",
+              "Schedule_time": "${data.schedule_time}"
+            },
+            "children": [
+              {
+                "type": "Image",
+                "visible": "`${data.is_text == false}`",
+                "src": "${data.images_path}",
+                "alt-text": "Status image"
+              },
+              {
+                "label": "Write up",
+                "name": "Write_up",
+                "required": "${data.is_text}",
+                "type": "TextArea"
+              },
+              {
+                "type": "Dropdown",
+                "label": "Schedule",
+                "required": true,
+                "name": "Schedule",
+                "data-source": [
+                  {
+                    "id": "Everyday",
+                    "title": "Everyday"
+                  },
+                  {
+                    "id": "Every_2_days",
+                    "title": "Every 2 days"
+                  },
+                  {
+                    "id": "Every_week",
+                    "title": "Every week"
+                  }
+                ]
+              },
+              {
+                "type": "Dropdown",
+                "label": "Schedule time",
+                "required": true,
+                "name": "Schedule_time",
+                "data-source": [
+                  {
+                    "id": "7:00AM",
+                    "title": "7:00AM"
+                  },
+                  {
+                    "id": "8:00AM",
+                    "title": "8:00AM"
+                  },
+                  {
+                    "id": "9:00AM",
+                    "title": "9:00AM"
+                  }
+                ]
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.type}"
+              },
+              {
+                "type": "TextBody",
+                "text": "${data.created_at}"
+              },
+              {
+                "label": "Update",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {
+                    "status_id": "${data.id}",
+                    "Write_up": "${form.Write_up}",
+                    "Schedule": "${form.Schedule}",
+                    "Schedule_time": "${form.Schedule_time}"
+                  }
+                },
+                "type": "Footer"
+              }
+            ],
+            "name": "add_status_form",
+            "type": "Form"
+          }
+        ],
+        "type": "SingleColumnLayout"
+      },
+      "title": "Update"
+    },
+    {
+      "id": "ERROR",
+      "title": "Error",
+      "data": {
+        "error_mssg": {
+          "type": "string",
+          "__example__": "Phone number already exists."
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RichText",
+            "text": "${data.error_mssg}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "NO_DATA",
+      "title": "No Data",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RichText",
+            "text": "No Status available"
+          },
+          {
+            "type": "Footer",
+            "label": "Add Status",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "name": "ADD_STATUS",
+                "type": "screen"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "COMPLETE",
+      "title": "Success!",
+      "data": {
+        "mssg": {
+          "type": "string",
+          "__example__": "Successfully added a status"
+        }
+      },
+      "terminal": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "flow_path",
+            "children": [
+              {
+                "type": "Image",
+                "src": "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",
+                "height": 84,
+                "scale-type": "contain"
+              },
+              {
+                "type": "TextSubheading",
+                "text": "${data.mssg}"
+              },
+              {
+                "type": "Footer",
+                "label": "Done",
+                "on-click-action": {
+                  "name": "data_exchange",
+                  "payload": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "version": "7.2"
+}

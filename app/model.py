@@ -19,7 +19,7 @@ class UserDB(Base):
         UniqueConstraint("phone", 'country', name="uq_user_phone_country"),
     )
 
-    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
     country: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         default=func.now()

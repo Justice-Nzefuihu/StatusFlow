@@ -22,17 +22,25 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
-
-
-class Status(BaseModel):
+class StatusBase(BaseModel):
     write_up: str | None = None
-    is_text: bool = False
-    images_path: str | None = None
     schedule: ScheduleEnum
     schedule_time: time
-    id: UUID
+
+class StatusCreate(StatusBase):
+    image: str
+    images_path: str | None = None
+    is_text: bool = False
+
+class StatusUpdate(StatusBase):
+    pass
+
+class Status(StatusBase):
     user_id: UUID
+    is_text: bool = False
+    images_path: str | None = None
     is_upload: bool
+    id: UUID
     created_at: datetime
     user: User
 

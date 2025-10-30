@@ -1,20 +1,20 @@
 from fastapi import (
     APIRouter, Depends, HTTPException, status, 
-    Response, UploadFile, File, Form
+    Response
 )
 from typing import Annotated, List
 from sqlalchemy.orm import Session, joinedload
-from ..schemas import Status
+from ..schemas import Status, StatusCreate, StatusUpdate
 from ..database import get_db
 from ..model import StatusDB, UserDB, ScheduleEnum
 from ..tasks import upload_media, delete_media, download_media
 from app.middlewares import get_rate_limit
 
 import os
-import shutil
 import pathlib
-from datetime import time, datetime, timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
+import base64
 
 # ---------------- Logging Setup ---------------- #
 from app.logging_config import get_logger
@@ -22,7 +22,7 @@ from app.logging_config import get_logger
 logger = get_logger(__name__)
 
 # ---------------- Router ---------------- #
-router = APIRouter(prefix="/status/{user_id}", tags=["Status"])
+router = APIRouter(prefix="/status/{phone_number}", tags=["Status"])
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 
 def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:
@@ -47,16 +47,21 @@ def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:
              dependencies=[Depends(get_rate_limit(50, 60))])
 def create_status(
     *,
-    user_id: UUID,
-    write_up: str | None = Form(None),
-    is_text: bool = Form(False),
-    schedule: ScheduleEnum = Form(...),
-    time: time = Form(time(7, 0)),
-    image: UploadFile | None = File(None),
+    phone_number: str,
+    create_data: StatusCreate,
     db: Annotated[Session, Depends(get_db)]
 ):
     try:
-        image_path = None
+        user = db.query(UserDB).filter_by(phone=phone_number).first()
+        user_id = user.id
+
+        write_up = create_data.write_up
+        is_text = create_data.is_text
+        schedule = create_data.schedule
+        time = create_data.schedule_time
+        image = create_data.image
+    
+        image_path = create_data.images_path
         MAIN_DIR = os.path.join(BASE_DIR, str(user_id))
         MEDIA_DIR = os.path.join(MAIN_DIR, 'media')
 
@@ -64,12 +69,15 @@ def create_status(
         os.makedirs(MEDIA_DIR, exist_ok=True)
 
         if image:
-            file_name = image.filename
-            file_location = os.path.join(MEDIA_DIR, file_name)
-            with open(file_location, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
+            try:
+                image_bytes = base64.b64decode(image.split(",")[-1])
+                file_name = image_path
+                file_location = os.path.join(MEDIA_DIR, file_name)
+                with open(file_location, "wb") as f:
+                    f.write(image_bytes)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Invalid image data: {e}")
 
-            
             image_path = str(file_location)
             position = image_path.find(str(user_id))
             user_id_length = len(str(user_id))
@@ -87,7 +95,6 @@ def create_status(
                 detail="Image status must include an image."
             )
 
-        user = db.query(UserDB).filter_by(id=user_id).first()
         if not user:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND,
@@ -166,14 +173,16 @@ def create_status(
 # ---------------- Get Statuses ---------------- #
 @router.get('', response_model=List[Status], 
             dependencies=[Depends(get_rate_limit(50, 60))])
-def get_statuses(user_id: UUID, db: Annotated[Session, Depends(get_db)]):
+def get_statuses(phone_number: str, db: Annotated[Session, Depends(get_db)]):
     try:
-        user = db.query(UserDB).filter_by(id=user_id).first()
+        user = db.query(UserDB).filter_by(phone=phone_number).first()
         if not user:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {user_id} not found"
+                detail=f"User with id {phone_number} not found"
             )
+        
+        user_id = user.id
 
         statuses = db.query(StatusDB).filter(
             StatusDB.user_id == user_id
@@ -199,14 +208,16 @@ def get_statuses(user_id: UUID, db: Annotated[Session, Depends(get_db)]):
 @router.delete('/{status_id}', 
                status_code=status.HTTP_204_NO_CONTENT
                , dependencies=[Depends(get_rate_limit(50, 60))])
-def delete_status(user_id: UUID, status_id: UUID, db: Annotated[Session, Depends(get_db)]):
+def delete_status(phone_number: str, status_id: UUID, db: Annotated[Session, Depends(get_db)]):
     try:
-        user = db.query(UserDB).filter_by(id=user_id).first()
+        user = db.query(UserDB).filter_by(phone=phone_number).first()
         if not user:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {user_id} not found"
+                detail=f"User with id {phone_number} not found"
             )
+        
+        user_id = user.id
 
         current_status_qs = db.query(StatusDB).filter(
             StatusDB.id == status_id,
@@ -270,20 +281,20 @@ def delete_status(user_id: UUID, status_id: UUID, db: Annotated[Session, Depends
             dependencies=[Depends(get_rate_limit(50, 60))])
 def update_status(
     *,
-    user_id: UUID,
+    phone_number: str,
     status_id: UUID,
-    write_up: str | None = Form(None),
-    schedule: ScheduleEnum = Form(...),
-    time: time = Form(time(7, 0)),
+    update_data: StatusUpdate,
     db: Annotated[Session, Depends(get_db)]
 ):
     try:
-        user = db.query(UserDB).filter_by(id=user_id).first()
+        user = db.query(UserDB).filter_by(phone=phone_number).first()
         if not user:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {user_id} not found"
+                detail=f"User with id {phone_number} not found"
             )
+        
+        user_id = user.id
 
         current_status_qs = db.query(StatusDB).filter(
             StatusDB.id == status_id,
@@ -313,7 +324,7 @@ def update_status(
         )
         
         if current_status.is_text:
-            if write_up == '':
+            if update_data.write_up == '':
                 raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
                 detail="Can not update text-only status with nothing."
@@ -324,7 +335,7 @@ def update_status(
                 .filter(
                     StatusDB.user_id == user_id,
                     StatusDB.is_text.is_(True),
-                    StatusDB.write_up == write_up.strip(),
+                    StatusDB.write_up == update_data.write_up.strip(),
                     StatusDB.id != status_id
                 )
                 .first()
@@ -337,9 +348,9 @@ def update_status(
                 )
 
         current_status_qs.update({
-            "write_up": write_up,
-            "schedule": schedule,
-            "schedule_time": time
+            "write_up": update_data.write_up,
+            "schedule": update_data.schedule,
+            "schedule_time": update_data.schedule_time
         }, synchronize_session=False)
 
         db.commit()
