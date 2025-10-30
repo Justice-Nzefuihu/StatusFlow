@@ -174,7 +174,9 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                             "is_text": status["is_text"],
                             "type": "Type: Text Status" if status["is_text"] else "Type: Image Status",
                             "image": image,
-                            "schedule": f"Schedule: {status['schedule']} ({status['schedule_time']})",
+                            "scheduled": f"Schedule: {status['schedule']} ({status['schedule_time']})",
+                            "schedule": f"{status['schedule']}",
+                            "schedule_time": f"{status['schedule_time']}",
                             "is_upload": "Uploaded: Yes" if status["is_upload"] else "Uploaded: No",
                             "created_at": f"created_at: {created_at}",
                             "upload_window_active": is_enabled

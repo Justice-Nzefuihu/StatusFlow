@@ -299,7 +299,9 @@
                   "Write_up": "Morning vibes 🌅",
                   "type": "Type: Text Status",
                   "image": "/9j/4AAQSkZJRgABAQAAAQABAAD…",
-                  "schedule":  "Schedule: EVERYDAY at 07:00 AM",
+                  "scheduled":  "Schedule: EVERYDAY at 07:00 AM",
+                  "schedule":  "EVERYDAY",
+                  "schedule_time":  "7:00 AM",
                   "is_upload":  "Uploaded: Yes",
                   "created_at": "Created At: 2025-10-28 at 11:43:10",
                   "upload_window_active": true
@@ -418,9 +420,17 @@
           "type": "string",
           "__example__": "https://storage.googleapis.com/statusflow/status1.jpg"
         },
-        "schedule": {
+        "scheduled": {
           "type": "string",
           "__example__": "Schedule: EVERYDAY at 07:00 AM"
+        },
+        "schedule": {
+          "type": "string",
+          "__example__": "EVERYDAY"
+        },
+        "schedule_time": {
+          "type": "string",
+          "__example__": "07:00 AM"
         },
         "is_upload": {
           "type": "string",
@@ -467,7 +477,7 @@
           },
           {
             "type": "TextBody",
-            "text": "${data.schedule}"
+            "text": "${data.scheduled}"
           },
           {
             "type": "TextBody",
@@ -511,6 +521,7 @@
                             "type": "${data.type}",
                             "image": "${data.image}",
                             "schedule": "${data.schedule}",
+                            "schedule_time": "${data.schedule_time}",
                             "is_upload": "${data.is_upload}",
                             "created_at": "${data.created_at}",
                             "upload_window_active": "${data.upload_window_active}"
