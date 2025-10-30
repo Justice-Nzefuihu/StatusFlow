@@ -4,7 +4,6 @@ FROM python:3.11-slim
 # ---------- Working Directory ----------
 WORKDIR /app
 
-
 # ---------- System Dependencies ----------
 RUN apt-get update && apt-get install -y \
     xvfb \
@@ -19,8 +18,8 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     ca-certificates \
     python3-tk scrot x11-utils \
+    x11-xserver-utils xauth \
     && rm -rf /var/lib/apt/lists/*
-
 
 # ---------- Install Google Chrome ----------
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg && \
@@ -30,30 +29,30 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
     rm -rf /var/lib/apt/lists/*
 
 # ---------- Copy Files ----------
-COPY . /app
-COPY requirements.txt ./  
-
-# ---------- Install Dependencies ----------
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
 
-# ---------- Environment ----------
+# ---------- Virtual Display + Xauthority Setup ----------
 ENV DISPLAY=:99
 ENV XAUTHORITY=/root/.Xauthority
 ENV PYTHONUNBUFFERED=1
-EXPOSE 8080
 
-# Create Xauthority file and add cookie for Xvfb :99
-RUN apt-get update && apt-get install -y x11-xserver-utils xauth && \
-    Xvfb :99 -screen 0 1280x720x24 & \
+# Create valid Xauthority cookie for Xvfb :99
+RUN Xvfb :99 -screen 0 1280x720x24 & \
     sleep 2 && \
     xauth add :99 . $(mcookie) && \
     pkill Xvfb
 
+EXPOSE 8080
+
 # ---------- CMD ----------
-# Start a virtual display first, then your Celery + FastAPI processes
-CMD Xvfb :99 -screen 0 1280x720x24 & \
+# Start Xvfb first → set DISPLAY → then run Celery and FastAPI
+CMD bash -c "\
+    Xvfb :99 -screen 0 1280x720x24 & \
     export DISPLAY=:99 && \
     sleep 2 && \
+    echo ' Virtual display :99 started' && \
     celery -A app.celery_app worker --loglevel=info --concurrency=2 & \
     celery -A app.celery_app beat --loglevel=info & \
-    uvicorn app.dummy:app --host 0.0.0.0 --port 8080
+    uvicorn app.dummy:app --host 0.0.0.0 --port 8080"

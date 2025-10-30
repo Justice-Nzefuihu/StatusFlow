@@ -1,19 +1,11 @@
 from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import PlainTextResponse
-import httpx
-import os
-import base64
+import httpx, os, json, base64
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime, timedelta
 from ..model import ScheduleEnum
 from app.crypto import decrypt_request, encrypt_response, decrypt_whatsapp_media
-
-# ---------------- Logging Setup ---------------- #
-from app.logging_config import get_logger
-
-logger = get_logger(__name__)
-
 
 # Load environment variables
 load_dotenv()
@@ -27,14 +19,10 @@ router = APIRouter(prefix="/flow", tags=["WhatsApp Flow"])
 
 def encode_image_base64(path: str | None) -> str | None:
     """Read image from file path and return as base64 string."""
-    try:
-        if not path or not Path(path).exists():
-            return ""
-        with open(path, "rb") as img:
-            return base64.b64encode(img.read()).decode("utf-8")
-    except Exception as e:
-        logger.error(f"Failed to encode image at {path}: {e}")
-        return ""
+    if not path or not Path(path).exists():
+        return None
+    with open(path, "rb") as img:
+        return base64.b64encode(img.read()).decode("utf-8")
 
 
 def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:
@@ -80,40 +68,35 @@ def get_next_screen(screen, response_data, flow_token, version):
 
 async def handle_signup_screen(data, phone_number, flow_token, version):
     """Handle sign-up logic."""
-    try:
-        if not data.get("terms_agreement"):
-            return get_error_screen("You must agree to the terms and conditions.", flow_token, version)
+    if not data.get("terms_agreement"):
+        return get_error_screen("You must agree to the terms and conditions.", flow_token, version)
 
-        if phone_number != data.get("phone"):
-            return get_error_screen("The phone number must match this WhatsApp number.", flow_token, version)
+    if phone_number != data.get("phone"):
+        return get_error_screen("The phone number must match this WhatsApp number.", flow_token, version)
 
+    async with httpx.AsyncClient() as client:
         USER_ENDPOINT = os.getenv("USER_ENDPOINT", "http://localhost:8000/user")
-        async with httpx.AsyncClient() as client:
-            forward_response = await client.post(USER_ENDPOINT, json=data)
+        forward_response = await client.post(USER_ENDPOINT, json=data)
 
         if forward_response.status_code >= 400:
-            logger.warning(f"Signup failed: {forward_response.text}")
             return get_error_screen(forward_response.json().get("detail", "Signup failed."), flow_token, version)
 
         return {
             "screen": "SUCCESS",
             "data": {"extension_message_response": {"params": {"flow_token": flow_token}}},
         }
-    except Exception as e:
-        logger.exception(f"Error in handle_signup_screen: {e}")
-        return get_error_screen("Unexpected error during sign-up.", flow_token, version)
 
 
 async def handle_get_status_screen(data, phone_number, flow_token, version):
     """Handle GET STATUS logic (View or Delete)."""
-    try:
+    async with httpx.AsyncClient() as client:
         STATUS_ENDPOINT = os.getenv("STATUS_ENDPOINT", "http://localhost:8000/status")
-        async with httpx.AsyncClient() as client:
-            forward_response = await client.get(f"{STATUS_ENDPOINT}/{phone_number}")
+        GET_STATUS_ENDPOINT = f"{STATUS_ENDPOINT}/{phone_number}"
+        forward_response = await client.get(GET_STATUS_ENDPOINT)
 
         if forward_response.status_code >= 400:
-            logger.warning(f"Failed to retrieve statuses: {forward_response.text}")
-            return get_error_screen("Failed to retrieve statuses.", flow_token, version)
+            return get_error_screen(forward_response.json().get("detail", "Failed to retrieve statuses."),
+                                    flow_token, version)
 
         statuses = forward_response.json()
         if not statuses:
@@ -138,6 +121,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                               and is_within_window and not status["is_upload"])
 
             if is_view:
+                # VIEW mode
                 status_dict = {
                     "id": status["id"],
                     "main-content": {
@@ -162,6 +146,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                     }
                 }
             else:
+                # DELETE mode
                 status_dict = {
                     "id": status["id"],
                     "title": write_up,
@@ -176,14 +161,10 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
         next_screen = "VIEW_STATUS" if is_view else "DELETE_SCREEN"
         return get_next_screen(next_screen, {"statuses": status_list}, flow_token, version)
 
-    except Exception as e:
-        logger.exception(f"Error in handle_get_status_screen: {e}")
-        return get_error_screen("Unexpected error while retrieving statuses.", flow_token, version)
-
 
 async def handle_add_status_screen(data, phone_number, flow_token, version):
     """Handle adding new status logic."""
-    try:
+    async with httpx.AsyncClient() as client:
         STATUS_ENDPOINT = os.getenv("STATUS_ENDPOINT", "http://localhost:8000/status")
         ADD_STATUS_ENDPOINT = f"{STATUS_ENDPOINT}/{phone_number}"
 
@@ -193,27 +174,57 @@ async def handle_add_status_screen(data, phone_number, flow_token, version):
             data["image"] = decrypt_whatsapp_media(photo_picker)
         else:
             if data.get("is_text") and data.get("image"):
-                if len(data.get("image")) > 0:
-                    logger.warning("Failed to add status: did not remove image or unselect Only text")
-                    return get_error_screen("Please remove image or unselect Only text.", flow_token, version)
-                else:
+                if len(data["image"]) == 0:
                     del data["image"]
+                else:
+                    return get_error_screen({"detail", "Please cancel image or unselect only_text."}, flow_token, version)
 
-
-        async with httpx.AsyncClient() as client:
-            forward_response = await client.post(ADD_STATUS_ENDPOINT, json=data)
-
+        forward_response = await client.post(ADD_STATUS_ENDPOINT, json=data)
         if forward_response.status_code >= 400:
-            logger.warning(f"Failed to add status: {forward_response.text}")
-            return get_error_screen("Failed to add status.", flow_token, version)
+            return get_error_screen(forward_response.json().get("detail", "Failed to add status."), flow_token, version)
 
         return get_next_screen("COMPLETE", forward_response.json(), flow_token, version)
-    except Exception as e:
-        logger.exception(f"Error in handle_add_status_screen: {e}")
-        return get_error_screen("Unexpected error adding status.", flow_token, version)
 
 
-# (You can follow this same try/except + logger.exception pattern for the other handler functions)
+async def handle_delete_status_screen(data, phone_number, flow_token, version):
+    """Handle deleting an existing status."""
+    async with httpx.AsyncClient() as client:
+        STATUS_ENDPOINT = os.getenv("STATUS_ENDPOINT", "http://localhost:8000/status")
+        DELETE_ENDPOINT = f"{STATUS_ENDPOINT}/{phone_number}/{data.get('id')}"
+        forward_response = await client.delete(DELETE_ENDPOINT)
+
+        if forward_response.status_code >= 400:
+            return get_error_screen(forward_response.json().get("detail", "Failed to delete status."),
+                                    flow_token, version)
+
+        return get_next_screen("DELETE_COMPLETE", {"mssg": "Status deleted successfully."}, flow_token, version)
+    
+async def handle_status_details_screen(data, phone_number, flow_token, version):
+    """Handle status details an existing status."""
+    if data.get("Choose_an_action_for_detail").lower() == "delete":
+        id = data.pop("status_id")
+        data["id"] = id
+        return await handle_add_status_screen(data, phone_number, flow_token, version)
+    else: 
+        del data["Choose_an_action_for_detail"]
+        plaintext_response = get_next_screen("UPDATE", data, flow_token, version)
+
+    return plaintext_response
+
+
+async def handle_update_status_screen(data, phone_number, flow_token, version):
+    """Handle updating a status (write-up, schedule, etc)."""
+    async with httpx.AsyncClient() as client:
+        STATUS_ENDPOINT = os.getenv("STATUS_ENDPOINT", "http://localhost:8000/status")
+        status_id = data.pop("status_id", None) 
+        STATUS_ENDPOINT = os.getenv("STATUS_ENDPOINT", "http://localhost:8000/status") 
+        UPDATE_STATUS_ENDPOINT = f"{STATUS_ENDPOINT}/{phone_number}/{status_id}"
+
+        forward_response = await client.put(UPDATE_STATUS_ENDPOINT, json=data)
+
+        if forward_response.status_code >= 400:
+            return get_error_screen(forward_response.json().get("detail", "Failed to update status."),flow_token, version)
+        return get_next_screen("UPDATE_COMPLETE", {"mssg": "Successfully updated a status"}, flow_token, version)
 
 
 # ─────────────────────────────
@@ -229,7 +240,8 @@ async def receive_whatsapp_flow(request: Request):
     try:
         encrypted_body = await request.json()
         payload, aes_key, iv = decrypt_request(encrypted_body)
-        # logger.info(f"Received WhatsApp flow: {json.dumps(payload, indent=2)}")
+
+        print("Decrypted WhatsApp flow data:", json.dumps(payload, indent=2))
 
         action = payload.get("action")
         screen = payload.get("screen")
@@ -238,11 +250,14 @@ async def receive_whatsapp_flow(request: Request):
         data = payload.get("data", {})
         phone_number = f"+{flow_token}"
 
+        # Initialize plaintext response
         plaintext_response = None
 
+        # PING
         if action == "ping":
             plaintext_response = {"data": {"status": "active"}}
 
+        # DATA_EXCHANGE
         elif action == "data_exchange":
             if screen == "SIGN_UP":
                 plaintext_response = await handle_signup_screen(data, phone_number, flow_token, version)
@@ -250,15 +265,23 @@ async def receive_whatsapp_flow(request: Request):
                 plaintext_response = await handle_get_status_screen(data, phone_number, flow_token, version)
             elif screen == "ADD_STATUS":
                 plaintext_response = await handle_add_status_screen(data, phone_number, flow_token, version)
+            elif screen == "DELETE_STATUS":
+                plaintext_response = await handle_delete_status_screen(data, phone_number, flow_token, version)
+            elif screen == "STATUS_DETAILS":
+                plaintext_response = await handle_status_details_screen(data, phone_number, flow_token, version)
+            elif screen == "UPDATE_STATUS":
+                plaintext_response = await handle_update_status_screen(data, phone_number, flow_token, version)
             else:
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported screen: {screen}")
+
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported action: {action}")
 
+        # Encrypt before sending response
         encrypted_response = encrypt_response(plaintext_response, aes_key, iv)
-        logger.info("Encrypted response successfully prepared.")
+        print("Encrypted response ready for WhatsApp.")
         return PlainTextResponse(content=encrypted_response)
 
     except Exception as e:
-        logger.exception(f"Error processing WhatsApp flow: {e}")
+        print("Error processing flow:", e)
         raise HTTPException(status_code=400, detail=f"Flow processing failed: {e}")
