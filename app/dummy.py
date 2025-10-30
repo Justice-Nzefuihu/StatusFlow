@@ -21,7 +21,7 @@ else:
     ALLOWED_ORIGINS = []
 
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
-MAINTENANCE_MODE = os.getenv("MAINTENANCE_MODE", "1") == "1"
+MAINTENANCE_MODE = os.getenv("MAINTENANCE_MODE", "0") == "1"
 
 app = FastAPI(title="Dummy")
 
@@ -41,11 +41,10 @@ app.add_middleware(
 async def protected_health_and_maintenance(request: Request, call_next):
     """
     Behavior:
-    - If request.path == /health:
-        require header x-internal-secret == INTERNAL_SECRET
+    - If require header x-internal-secret == INTERNAL_SECRET
         otherwise return 403
     - If MAINTENANCE_MODE is enabled:
-        block all requests except /health
+        block all requests
     - Otherwise allow request to proceed
     """
     path = request.url.path
@@ -75,6 +74,10 @@ async def health():
 
 
 # Example real endpoint
+@app.get("/")
+async def home():
+    return {"status": "ok"}
+
 @app.get("/ping")
 async def ping():
     return {"pong": True}
