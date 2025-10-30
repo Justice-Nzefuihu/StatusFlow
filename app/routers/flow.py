@@ -51,6 +51,19 @@ def is_due_by_schedule(schedule: ScheduleEnum, days_diff: int) -> bool:
     return days_diff % interval == 0
 
 
+schedule_map = {
+        ScheduleEnum.EVERYDAY.value: "Every Day",
+        ScheduleEnum.EVERY_2_DAYS.value: "Every 2D",
+        ScheduleEnum.EVERY_3_DAYS.value: "Every 3D",
+        ScheduleEnum.EVERY_4_DAYS.value: "Every 4D",
+        ScheduleEnum.EVERY_5_DAYS.value: "Every 5D",
+        ScheduleEnum.EVERY_6_DAYS.value: "Every 6D",
+        ScheduleEnum.EVERY_WEEK.value: "Weekly",
+        ScheduleEnum.EVERY_10_DAYS.value: "Every 10D",
+        ScheduleEnum.EVERY_2_WEEKS.value: "Biweekly",
+    }
+
+
 def get_error_screen(detail: str, flow_token, version):
     """Return standardized error response."""
     return {
@@ -124,6 +137,16 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
             if len(write_up) >= 25:
                 write_up = f"{write_up[:20]}..."
 
+            schedule_time = time.fromisoformat(status['schedule_time']).strftime("%I:%M %p")
+            schedule = schedule_map.get(status.get("schedule"), status.get("schedule"))
+
+            # Format created_at
+            created_at = status.get("created_at", "")
+            if "T" in created_at:
+                created_at = created_at.replace("T", " ")
+
+            created_at = created_at.split(".")[0]
+
             now = datetime.now()
             start_time = (now - timedelta(minutes=5)).time()
             end_time = (now + timedelta(minutes=35)).time()
@@ -138,12 +161,12 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                     "id": status["id"],
                     "main-content": {
                         "title": write_up,
-                        "description": f"Schedule: {status['schedule']} ({status['schedule_time']})",
-                        "metadata": f"created_at: {status['created_at']}"
+                        "description": f"Schedule: {schedule} @{schedule_time})",
+                        "metadata": f"created_at: {created_at}"
                     },
                     "start": {"image": image},
                     "on-click-action": {
-                        "name": "data_exchange",
+                        "name": "navigate",
                         "next": {"name": "STATUS_DETAILS", "type": "screen"},
                         "payload": {
                             "id": status["id"],
@@ -152,7 +175,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                             "image": image,
                             "schedule": f"Schedule: {status['schedule']} ({status['schedule_time']})",
                             "is_upload": "Uploaded: Yes" if status["is_upload"] else "Uploaded: No",
-                            "created_at": f"created_at: {status['created_at']}",
+                            "created_at": f"created_at: {created_at}",
                             "upload_window_active": is_enabled
                         }
                     }
@@ -161,8 +184,8 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                 status_dict = {
                     "id": status["id"],
                     "title": write_up,
-                    "description": f"Schedule: {status['schedule']} ({status['schedule_time']})",
-                    "metadata": f"created_at: {status['created_at']}",
+                    "description": f"Schedule: {schedule} @{schedule_time})",
+                    "metadata": f"created_at: {created_at}",
                     "enabled": is_enabled,
                     "image": image
                 }
