@@ -46,6 +46,9 @@ RUN Xvfb :99 -screen 0 1280x720x24 & \
 
 EXPOSE 8080
 
+# This environment variable disables the root warning safely
+ENV C_FORCE_ROOT=true
+
 # ---------- CMD ----------
 # Start Xvfb first → set DISPLAY → then run Celery and FastAPI
 CMD bash -c "\

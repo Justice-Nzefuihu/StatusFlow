@@ -5,7 +5,8 @@
       "ADD_STATUS",
       "VIEW_STATUS",
       "DELETE_STATUS",
-      "NO_DATA"
+      "NO_DATA",
+      "ERROR"
     ],
     "ADD_STATUS": [
       "COMPLETE",
@@ -188,15 +189,15 @@
                 "name": "Schedule_time",
                 "data-source": [
                   {
-                    "id": "7:00:00",
+                    "id": "07:00:00",
                     "title": "7:00AM"
                   },
                   {
-                    "id": "8:00:00",
+                    "id": "08:00:00",
                     "title": "8:00AM"
                   },
                   {
-                    "id": "9:00:00",
+                    "id": "09:00:00",
                     "title": "9:00AM"
                   },
                   {
@@ -596,17 +597,41 @@
                 "name": "Schedule",
                 "data-source": [
                   {
-                    "id": "Everyday",
-                    "title": "Everyday"
+                    "id": "Every Day",
+                    "title": "Every Day"
                   },
                   {
-                    "id": "Every_2_days",
-                    "title": "Every 2 days"
+                    "id": "Every 2 Days",
+                    "title": "Every 2 Days"
                   },
                   {
-                    "id": "Every_week",
-                    "title": "Every week"
-                  }
+                    "id": "Every 3 Days",
+                    "title": "Every 3 Days"
+                  },
+                  {
+                    "id": "Every 4 Days",
+                    "title": "Every 4 Days"
+                  },
+                  {
+                    "id": "Every 5 Days",
+                    "title": "Every 5 Days"
+                  },
+                  {
+                    "id": "Every 6 Days",
+                    "title": "Every 6 Days"
+                  },
+                  {
+                      "id": "Every Week",
+                      "title": "Every Week"
+                    },
+                    {
+                      "id": "Every 10 Days",
+                      "title": "Every 10 Days"
+                    },
+                    {
+                      "id": "Every 2 Week",
+                      "title": "Every 2 Week"
+                    }
                 ]
               },
               {
@@ -616,16 +641,32 @@
                 "name": "Schedule_time",
                 "data-source": [
                   {
-                    "id": "7:00AM",
+                    "id": "07:00:00",
                     "title": "7:00AM"
                   },
                   {
-                    "id": "8:00AM",
+                    "id": "08:00:00",
                     "title": "8:00AM"
                   },
                   {
-                    "id": "9:00AM",
+                    "id": "09:00:00",
                     "title": "9:00AM"
+                  },
+                  {
+                    "id": "10:00:00",
+                    "title": "10:00AM"
+                  },
+                  {
+                    "id": "11:00:00",
+                    "title": "11:00AM"
+                  },
+                  {
+                    "id": "12:00:00",
+                    "title": "12:00PM"
+                  },
+                  {
+                    "id": "13:00:00",
+                    "title": "1:00PM"
                   }
                 ]
               },

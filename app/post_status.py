@@ -8,6 +8,9 @@ logger = get_logger(__name__)
 
 try:
     import pyautogui
+    
+    pos = pyautogui.position()
+    logger.info(f"PyAutoGUI active! Mouse position: {pos}")
 except Exception as e:
     pyautogui = None
     logger.warning("PyAutoGUI disabled in headless environment: %s", e)
