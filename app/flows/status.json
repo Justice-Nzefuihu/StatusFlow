@@ -144,39 +144,39 @@
                 "name": "Schedule",
                 "data-source": [
                   {
-                    "id": "EVERYDAY",
+                    "id": "Every Day",
                     "title": "Every Day"
                   },
                   {
-                    "id": "EVERY_2_DAYS",
+                    "id": "Every 2 Days",
                     "title": "Every 2 Days"
                   },
                   {
-                    "id": "EVERY_3_DAYS",
+                    "id": "Every 3 Days",
                     "title": "Every 3 Days"
                   },
                   {
-                    "id": "EVERY_4_DAYS",
+                    "id": "Every 4 Days",
                     "title": "Every 4 Days"
                   },
                   {
-                    "id": "EVERY_5_DAYS",
+                    "id": "Every 5 Days",
                     "title": "Every 5 Days"
                   },
                   {
-                    "id": "EVERY_6_DAYS",
+                    "id": "Every 6 Days",
                     "title": "Every 6 Days"
                   },
                   {
-                      "id": "EVERY_WEEK",
+                      "id": "Every Week",
                       "title": "Every Week"
                     },
                     {
-                      "id": "EVERY_10_DAYS",
+                      "id": "Every 10 Days",
                       "title": "Every 10 Days"
                     },
                     {
-                      "id": "EVERY_2_WEEK",
+                      "id": "Every 2 Week",
                       "title": "Every 2 Week"
                     }
                 ]
@@ -226,7 +226,7 @@
                     "write_up": "${form.Write_up}",
                     "is_text": "${form.Only_Text}",
                     "schedule": "${form.Schedule}",
-                    "time": "${form.Schedule_time}"
+                    "Schedule_time": "${form.Schedule_time}"
                   }
                 },
                 "type": "Footer"

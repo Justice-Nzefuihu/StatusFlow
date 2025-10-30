@@ -192,11 +192,12 @@ async def handle_add_status_screen(data, phone_number, flow_token, version):
             data["image_path"] = photo_picker.get("file_name")
             data["image"] = decrypt_whatsapp_media(photo_picker)
         else:
-            if data.get("is_text") and len(data.get("image")) > 0:
-                logger.warning("Failed to add status: did not remove image or unselect Only text")
-                return get_error_screen("Please reomve image or unselect Only text.", flow_token, version)
-            else:
-                del data["image"]
+            if data.get("is_text") and data.get("image"):
+                if len(data.get("image")) > 0:
+                    logger.warning("Failed to add status: did not remove image or unselect Only text")
+                    return get_error_screen("Please remove image or unselect Only text.", flow_token, version)
+                else:
+                    del data["image"]
 
 
         async with httpx.AsyncClient() as client:
