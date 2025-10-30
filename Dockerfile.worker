@@ -37,12 +37,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ---------- Environment ----------
 ENV DISPLAY=:99
+ENV XAUTHORITY=/root/.Xauthority
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
+
+RUN touch /root/.Xauthority
 
 # ---------- CMD ----------
 # Start a virtual display first, then your Celery + FastAPI processes
 CMD Xvfb :99 -screen 0 1280x720x24 & \
+    export DISPLAY=:99 && \
     sleep 2 && \
     celery -A app.celery_app worker --loglevel=info --concurrency=2 & \
     celery -A app.celery_app beat --loglevel=info & \
