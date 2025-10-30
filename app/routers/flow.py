@@ -5,7 +5,7 @@ import os
 import base64
 from dotenv import load_dotenv
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from ..model import ScheduleEnum
 from app.crypto import decrypt_request, encrypt_response, decrypt_whatsapp_media
 from app.logging_config import get_logger
@@ -128,7 +128,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
             start_time = (now - timedelta(minutes=5)).time()
             end_time = (now + timedelta(minutes=35)).time()
             days_diff = (now.date() - datetime.fromisoformat(str(status["created_at"])).date()).days
-            is_within_window = start_time <= datetime.fromisoformat(str(status["schedule_time"])).time() <= end_time
+            is_within_window = start_time <= time.fromisoformat(str(status["schedule_time"])) <= end_time
 
             is_enabled = not ((is_due_by_schedule(status["schedule"], days_diff) or days_diff == 1)
                               and is_within_window and not status["is_upload"])
