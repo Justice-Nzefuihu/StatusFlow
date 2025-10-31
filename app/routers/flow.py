@@ -316,7 +316,8 @@ async def receive_whatsapp_flow(request: Request):
         if action == "ping":
             plaintext_response = {"data": {"status": "active"}}
 
-        # elif action == "BACK":
+        elif action == "BACK":
+            logger.info(data)
         #     if screen == "STATUS_DETAILS":
         #         plaintext_response = await handle_status_details_screen(data, phone_number, flow_token, version)
 
