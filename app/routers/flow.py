@@ -195,7 +195,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
 
             status_list.append(status_dict)
 
-        next_screen = "VIEW_STATUS" if is_view else "DELETE_SCREEN"
+        next_screen = "VIEW_STATUS" if is_view else "DELETE_STATUS"
         return get_next_screen(next_screen, {"statuses": status_list}, flow_token, version)
 
     except Exception as e:
@@ -313,6 +313,12 @@ async def receive_whatsapp_flow(request: Request):
 
         if action == "ping":
             plaintext_response = {"data": {"status": "active"}}
+
+        # elif action == "BACK":
+        #     if screen == "STATUS_DETAILS":
+        #         plaintext_response = await handle_status_details_screen(data, phone_number, flow_token, version)
+
+        #     elif
 
         elif action == "data_exchange":
             if screen == "SIGN_UP":
