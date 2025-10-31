@@ -330,7 +330,14 @@ async def receive_whatsapp_flow(request: Request):
             elif screen == "STATUS_DETAILS":
                 plaintext_response = await handle_status_details_screen(data, phone_number, flow_token, version)
             elif screen == "DELETE_STATUS":
-                plaintext_response = await handle_delete_status_screen(data, phone_number, flow_token, version)
+                status_id_list = data.get("selected_status", None)
+                if isinstance(status_id_list, list):
+                    for status in status_id_list:
+                        data = {
+                            "id": status
+                        }
+                        plaintext_response = await handle_delete_status_screen(data, phone_number, flow_token, version)
+
             elif screen == "UPDATE_STATUS":
                 plaintext_response = await handle_update_status_screen(data, phone_number, flow_token, version)
             elif screen == "ADD_STATUS":
