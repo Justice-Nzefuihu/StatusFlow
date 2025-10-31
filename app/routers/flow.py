@@ -231,7 +231,7 @@ async def handle_add_status_screen(data, phone_number, flow_token, version):
             logger.warning(f"Failed to add status: {forward_response.text}")
             return get_error_screen("Failed to add status.", flow_token, version)
 
-        return get_next_screen("COMPLETE", {"mssg": "Status deleted successfully."}, flow_token, version)
+        return get_next_screen("COMPLETE", {"mssg": "Status added successfully."}, flow_token, version)
     except Exception as e:
         logger.exception(f"Error in handle_add_status_screen: {e}")
         return get_error_screen("Unexpected error adding status.", flow_token, version)
@@ -261,7 +261,7 @@ async def handle_status_details_screen(data, phone_number, flow_token, version):
             return await handle_add_status_screen(data, phone_number, flow_token, version)
        else: 
             data.pop("Choose_an_action_for_detail", None)
-            return get_next_screen("UPDATE", data, flow_token, version)
+            return get_next_screen("UPDATE_STATUS", data, flow_token, version)
        
     except Exception as e:
         logger.exception(f"Error in handle_status_details_screen: {e}")

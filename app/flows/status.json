@@ -21,9 +21,9 @@
       "ERROR"
     ],
     "STATUS_DETAILS": [
-      "UPDATE"
+      "UPDATE_STATUS"
     ],
-    "UPDATE": [
+    "UPDATE_STATUS": [
       "COMPLETE",
       "ERROR"
     ],
@@ -282,8 +282,8 @@
               "id": "b9a7b7f8-1234-4c6e-b001-abcde12345f6",
               "main-content": {
                 "title": "Morning update",
-                "description": "Schedule: 07:00 AM (Everyday)",
-                "metadata": "created_at: 2025-10-28T13:10:00"
+                "description": "07:00 AM (Everyday)",
+                "metadata": "2025-10-28T13:10:00"
               },
               "start": {
                 "image": ""
@@ -298,6 +298,7 @@
                   "id": "b9a7b7f8-1234-4c6e-b001-abcde12345f6",
                   "Write_up": "Morning vibes 🌅",
                   "type": "Type: Text Status",
+                  "is_text": true,
                   "image": "/9j/4AAQSkZJRgABAQAAAQABAAD…",
                   "scheduled":  "Schedule: EVERYDAY at 07:00 AM",
                   "schedule":  "EVERYDAY",
@@ -498,7 +499,7 @@
                     "title": "Delete"
                   },
                   {
-                    "id": "Update",
+                    "id": "Update_",
                     "title": "Update"
                   }
                 ],
@@ -517,12 +518,13 @@
                     "Choose_an_action_for_detail": "${form.Choose_an_action_for_detail}",
                     "status_id": "${data.id}",
                     "id": "${data.id}",
-                    "Write_up": "${data.write_up}",
+                    "write_up": "${data.write_up}",
                             "type": "${data.type}",
                             "image": "${data.image}",
                             "schedule": "${data.schedule}",
                             "schedule_time": "${data.schedule_time}",
                             "is_upload": "${data.is_upload}",
+                            "is_text": "${data.is_text}",
                             "created_at": "${data.created_at}",
                             "upload_window_active": "${data.upload_window_active}"
                   }
@@ -560,11 +562,11 @@
         },
         "schedule": {
           "type": "string",
-          "__example__": "Everyday"
+          "__example__": "Every Day"
         },
         "schedule_time": {
           "type": "string",
-          "__example__": "7:00AM"
+          "__example__": "07:00:00"
         },
         "is_upload": {
           "type": "string",
@@ -579,7 +581,7 @@
           "__example__": false
         }
       },
-      "id": "UPDATE",
+      "id": "UPDATE_STATUS",
       "layout": {
         "children": [
           {
@@ -709,7 +711,7 @@
         ],
         "type": "SingleColumnLayout"
       },
-      "title": "Update"
+      "title": "Update Status"
     },
     {
       "id": "ERROR",
