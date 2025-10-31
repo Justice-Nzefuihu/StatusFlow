@@ -697,7 +697,7 @@
                   "name": "data_exchange",
                   "payload": {
                     "status_id": "${data.id}",
-                    "Write_up": "${form.Write_up}",
+                    "write_up": "${form.Write_up}",
                     "schedule": "${form.Schedule}",
                     "schedule_time": "${form.Schedule_time}"
                   }

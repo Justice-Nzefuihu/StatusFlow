@@ -248,7 +248,7 @@ async def handle_delete_status_screen(data, phone_number, flow_token, version):
                     logger.warning(f"Failed to delete status: {forward_response.text}")
                     return get_error_screen("Failed to delete status." ,flow_token, version)
 
-        return get_next_screen("DELETE_COMPLETE", {"mssg": "Status deleted successfully."}, flow_token, version)
+        return get_next_screen("COMPLETE", {"mssg": "Status deleted successfully."}, flow_token, version)
     except Exception as e:
         logger.exception(f"Error in handle_delete_status_screen: {e}")
         return get_error_screen("Unexpected error deleteing status.", flow_token, version)
@@ -281,7 +281,7 @@ async def handle_update_status_screen(data, phone_number, flow_token, version):
                     logger.warning(f"Failed to update status: {forward_response.text}")
                     return get_error_screen("Failed to update status." ,flow_token, version)
 
-        return get_next_screen("DELETE_COMPLETE", {"mssg": "Status updated successfully."}, flow_token, version)
+        return get_next_screen("COMPLETE", {"mssg": "Status updated successfully."}, flow_token, version)
     except Exception as e:
         logger.exception(f"Error in handle_delete_status_screen: {e}")
         return get_error_screen("Unexpected error deleteing status.", flow_token, version)
