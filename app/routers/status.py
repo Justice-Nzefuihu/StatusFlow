@@ -15,6 +15,7 @@ import pathlib
 from datetime import datetime, timedelta
 from uuid import UUID
 import base64
+import pytz
 
 # ---------------- Logging Setup ---------------- #
 from app.logging_config import get_logger
@@ -231,7 +232,8 @@ def delete_status(phone_number: str, status_id: UUID, db: Annotated[Session, Dep
                 detail=f"Status with id '{status_id}' not found"
             )
         
-        now = datetime.now()
+        timezone = pytz.timezone("Africa/Lagos")
+        now = datetime.now(timezone)
         start_time = (now - timedelta(minutes=5)).time()
         end_time = (now + timedelta(minutes=35)).time()
         days_diff = (now.date() - current_status.created_at.date()).days
@@ -308,7 +310,8 @@ def update_status(
                 detail=f"Status with id '{status_id}' not found"
             )
         
-        now = datetime.now()
+        timezone = pytz.timezone("Africa/Lagos")
+        now = datetime.now(timezone)
         start_time = (now - timedelta(minutes=5)).time()
         end_time = (now + timedelta(minutes=35)).time()
         days_diff = (now.date() - current_status.created_at.date()).days

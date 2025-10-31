@@ -352,6 +352,9 @@
               "metadata": {
                 "type": "string"
               },
+              "enabled": {
+                "type": "boolean"
+              },
               "image": {
                 "type": "string"
               }

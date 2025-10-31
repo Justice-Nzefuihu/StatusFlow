@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import PlainTextResponse
 import httpx
 import os
+import pytz
 import base64
 from dotenv import load_dotenv
 from pathlib import Path
@@ -147,7 +148,8 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
 
             created_at = created_at.split(".")[0]
 
-            now = datetime.now()
+            timezone = pytz.timezone("Africa/Lagos")
+            now = datetime.now(timezone)
             start_time = (now - timedelta(minutes=5)).time()
             end_time = (now + timedelta(minutes=35)).time()
             days_diff = (now.date() - datetime.fromisoformat(str(status["created_at"])).date()).days
@@ -189,7 +191,7 @@ async def handle_get_status_screen(data, phone_number, flow_token, version):
                     "title": write_up,
                     "description": f"{schedule} @{schedule_time}",
                     "metadata": f"{created_at}",
-                    "enabled": is_enabled,
+                    "enabled": not is_enabled,
                     "image": image
                 }
 
