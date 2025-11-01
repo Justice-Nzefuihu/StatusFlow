@@ -1,6 +1,9 @@
 {
   "data_api_version": "3.0",
   "routing_model": {
+    "WELCOME": [
+      "INDEX"
+    ],
     "INDEX": [
       "ADD_STATUS",
       "VIEW_STATUS",
@@ -22,6 +25,7 @@
     ],
     "STATUS_DETAILS": [
       "UPDATE_STATUS",
+      "COMPLETE",
       "ERROR"
     ],
     "UPDATE_STATUS": [
@@ -29,34 +33,63 @@
       "ERROR"
     ],
     "ERROR": ["NO_PAGE"],
-    "COMPLETE": [],
-    "NO_DATA": [],
+    "COMPLETE": ["INDEX"],
+    "NO_DATA": ["ADD_STATUS"],
     "NO_PAGE": []
   },
   "screens": [
     {
-      "id": "INDEX",
-      "title": "StatusFlow",
-      "data": {
-        "Choose_an_action": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "main-content": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
+  "id": "WELCOME",
+  "title": "Welcome",
+  "layout": {
+    "type": "SingleColumnLayout",
+    "children": [
+      {
+        "type": "Image",
+        "src": "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAM1BMVEX///8AAADm5uZ5eXnU1NSmpqa7u7vPz8/FxcX19fXr6+vIyMi/v7+Kioq0tLS3t7fJycl6PWAI AAABxElEQVR4nO3aQU7DIBBFUTMglG//6W3Y0JVpazBHQwHxZ34rnOG0CAAAAAAAAAAAAAAAAADB1MfCVx/gvBy06SnVAk0nnk3uRlaRykGGBqBPdZiZsaAJ+lZeI7IuAvV38DSHLVQQRIlnSRrped1IovnEkmHGawEq+y3OCAXoTr4Wr9PXgCulngTDQlFJaYPDhm/COM24kTx5cDIeEJD7BqXc9EwTx6KDAdAm8ZI1sC3yRyvE4s46HoPazTA/gkGEXUXMaLLfi5yRvCNrI6VsgGAaHo9dZYkTfGZNVVRFlgEFYyqS/fWznEtCG2lLBVmOAXoJ2i8LJIYur2jcWcA6i/K3PaY5E9O+V1YQUiSO1kVcAMwVxo5jBqFa9UcRgxN6E466+vWXTmBMWrMUR3pvN8MPWXc2MvmP0xSg6u40qCMgfHdCqfpNNpJBWlAbIYWq2PASi6DPd7OJbRRqtD9h5pz2jdK4Zk90un0nLB522Ssqn1HULICwhfLaAIAAAAAAAAAAAAAAAAAD8E/gBrRykGGBqBtwAAAABJRU5ErkJggg==",
+        "height": 120,
+        "scale-type": "contain"
+      },
+      {
+        "type": "TextHeading",
+        "text": "Welcome to StatusFlow 🎉"
+      },
+      {
+        "type": "TextBody",
+        "text": "Manage your WhatsApp status automation with ease — upload, schedule, update, or delete your daily statuses in seconds."
+      },
+      {
+        "type": "TextBody",
+        "text": "Tap Continue to begin."
+      },
+      {
+        "type": "Footer",
+        "label": "Continue",
+        "on-click-action": {
+          "name": "navigate",
+          "next": {
+            "name": "INDEX",
+            "type": "screen"
           },
-          "__example__": [
+          "payload": {}
+
+          }
+        }
+    ]
+  }
+}
+,
+    {
+      "id": "INDEX",
+      "title": "Index",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "NavigationList",
+            "name": "Choose_an_action",
+            "list-items":  [
             {
               "id": "ADD_STATUS",
               "main-content": {
@@ -98,15 +131,6 @@
               }
             }
           ]
-        }
-      },
-      "layout": {
-        "type": "SingleColumnLayout",
-        "children": [
-          {
-            "type": "NavigationList",
-            "name": "Choose_an_action",
-            "list-items": "${data.Choose_an_action}"
           }
         ]
       }
