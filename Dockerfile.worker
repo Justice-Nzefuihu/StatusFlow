@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     python3-tk scrot x11-utils \
     x11-xserver-utils xauth \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------- Install Google Chrome ----------
@@ -52,6 +53,7 @@ ENV C_FORCE_ROOT=true
 # ---------- CMD ----------
 # Start Xvfb first → set DISPLAY → then run Celery and FastAPI
 CMD bash -c "\
+    ping google.com && \
     Xvfb :99 -screen 0 1280x720x24 & \
     export DISPLAY=:99 && \
     sleep 2 && \
