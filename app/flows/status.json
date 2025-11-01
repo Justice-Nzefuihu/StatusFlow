@@ -27,9 +27,10 @@
       "COMPLETE",
       "ERROR"
     ],
-    "ERROR": [],
+    "ERROR": ["NO_PAGE"],
     "COMPLETE": [],
-    "NO_DATA": []
+    "NO_DATA": [],
+    "NO_PAGE": []
   },
   "screens": [
     {
@@ -769,7 +770,6 @@
           "__example__": "Successfully added a status"
         }
       },
-      "terminal": true,
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
@@ -786,8 +786,35 @@
               {
                 "type": "TextSubheading",
                 "text": "${data.mssg}"
+              },
+              {
+            "type": "Footer",
+            "label": "Contiune",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "name": "INDEX",
+                "type": "screen"
+              },
+              "payload": {
               }
+            }
+          }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "NO_PAGE",
+      "title": "No Data",
+      "terminal": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RichText",
+            "text": "No Status available"
           }
         ]
       }

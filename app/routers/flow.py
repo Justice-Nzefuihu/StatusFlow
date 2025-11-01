@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, status
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import PlainTextResponse
 import httpx
 import os
@@ -316,13 +316,6 @@ async def receive_whatsapp_flow(request: Request):
         if action == "ping":
             plaintext_response = {"data": {"status": "active"}}
 
-        elif action == "BACK":
-            logger.info(data)
-        #     if screen == "STATUS_DETAILS":
-        #         plaintext_response = await handle_status_details_screen(data, phone_number, flow_token, version)
-
-        #     elif
-
         elif action == "data_exchange":
             if screen == "SIGN_UP":
                 plaintext_response = await handle_signup_screen(data, phone_number, flow_token, version)
@@ -338,7 +331,6 @@ async def receive_whatsapp_flow(request: Request):
                             "id": status
                         }
                         plaintext_response = await handle_delete_status_screen(data, phone_number, flow_token, version)
-
             elif screen == "UPDATE_STATUS":
                 plaintext_response = await handle_update_status_screen(data, phone_number, flow_token, version)
             elif screen == "ADD_STATUS":
