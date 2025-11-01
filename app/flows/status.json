@@ -21,7 +21,8 @@
       "ERROR"
     ],
     "STATUS_DETAILS": [
-      "UPDATE_STATUS"
+      "UPDATE_STATUS",
+      "ERROR"
     ],
     "UPDATE_STATUS": [
       "COMPLETE",

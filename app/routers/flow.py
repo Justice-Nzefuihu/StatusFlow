@@ -260,7 +260,7 @@ async def handle_status_details_screen(data, phone_number, flow_token, version):
     try:
        if data.get("Choose_an_action_for_detail").lower() == "delete":
             data["id"] = data.pop("status_id")
-            return await handle_add_status_screen(data, phone_number, flow_token, version)
+            return await handle_delete_status_screen(data, phone_number, flow_token, version)
        else: 
             data.pop("Choose_an_action_for_detail", None)
             return get_next_screen("UPDATE_STATUS", data, flow_token, version)
