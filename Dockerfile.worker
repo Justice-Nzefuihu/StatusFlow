@@ -1,60 +1,65 @@
-# ---------- Base Image ----------
+# ---------------- Base Image ---------------- #
 FROM python:3.11-slim
 
-# ---------- Working Directory ----------
-WORKDIR /app
-
-# ---------- System Dependencies ----------
-# Smaller install: removed many unneeded heavy packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    xvfb \
-    xauth \
-    libnss3 \
-    libxss1 \
-    libgbm1 \
-    libasound2 \
-    wget \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# ---------- Install Google Chrome ----------
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
-    gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] \
-     http://dl.google.com/linux/chrome/deb/ stable main" \
-     > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && apt-get install -y --no-install-recommends google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
-
-# ---------- Copy Files ----------
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
-
-# ---------- Virtual Display + .Xauthority ----------
+# ---------------- Environment Fixes ---------------- #
+ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=:99
 ENV XAUTHORITY=/root/.Xauthority
-ENV PYTHONUNBUFFERED=1
+ENV PIP_ROOT_USER_ACTION=ignore
 
-# FIX #1 — Create valid Xauthority file with correct permissions
-RUN touch /root/.Xauthority && chmod 600 /root/.Xauthority
+# ---------------- Working Directory ---------------- #
+WORKDIR /app
 
-# REMOVE this block — it created race conditions & permission errors
-# RUN Xvfb :99 -screen 0 1280x720x24 & \
-#     sleep 2 && \
-#     xauth add :99 . $(mcookie) && \
-#     pkill Xvfb
+# ---------------- System Dependencies ---------------- #
+RUN apt-get update && apt-get install -y \
+    xvfb \
+    xauth \
+    python3-tk python3-dev \ 
+    wget \
+    gnupg \
+    libnss3 \
+    libxss1 \
+    libgbm-dev \
+    libxkbcommon-x11-0 \
+    fonts-liberation \
+    libasound2 \
+    xdg-utils \
+    scrot \
+    x11-utils \
+    && rm -rf /var/lib/apt/lists/*
 
+# ---------------- Install Google Chrome ---------------- #
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
+    | gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] \
+    http://dl.google.com/linux/chrome/deb/ stable main" \
+    > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------- Install Python Dependencies ---------------- #
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---------------- Copy App ---------------- #
+COPY . /app
+
+# ---------------- Pre-Create Xauthority Cookie ---------------- #
+RUN Xvfb :99 -screen 0 1280x720x24 & \
+    sleep 2 && \
+    xauth add :99 . $(mcookie) && \
+    pkill Xvfb
+
+# ---------------- Expose Port ---------------- #
 EXPOSE 8080
 
-# ---------- CMD ----------
-# FIX #2 — Build XAUTHORITY & Xvfb at runtime only
+# ---------------- CMD Startup Script ---------------- #
 CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && \
     Xvfb :99 -screen 0 1280x720x24 & \
-    sleep 1 && \
-    xauth add :99 . $(mcookie) && \
-    echo 'Virtual display ready' && \
+    export DISPLAY=:99 && \
+    sleep 2 && \
+    echo '✅ Virtual display :99 started' && \
     celery -A app.celery_app worker --loglevel=info & \
     celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
     uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
