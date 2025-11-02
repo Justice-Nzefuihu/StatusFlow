@@ -53,9 +53,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # ----------------------------------------
-# Create non-root user
+# Create non-root user + FIX XAUTHORITY
 # ----------------------------------------
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
+RUN groupadd -r appgroup && \
+    useradd -m -r -g appgroup appuser && \
+    mkdir -p /home/appuser && \
+    touch /home/appuser/.Xauthority && \
+    chown -R appuser:appgroup /home/appuser && \
     chown -R appuser:appgroup /app
 
 ENV DISPLAY=:99
@@ -65,14 +69,13 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # ----------------------------------------
-# CMD: Start Xvfb as root → then downgrade user
+# CMD: Start Xvfb → create cookie → switch user
 # ----------------------------------------
 CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
     Xvfb :99 -screen 0 1280x720x24 & \
     sleep 2 ; \
-    xauth add :99 . $(mcookie) ; \
-    chown appuser:appgroup /home/appuser/.Xauthority ; \
+    su appuser -c 'xauth add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
     su appuser -c 'celery -A app.celery_app worker --loglevel=info' & \
     su appuser -c 'celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
