@@ -56,7 +56,6 @@ CMD bash -c "\
     export DISPLAY=:99 && \
     sleep 2 && \
     echo ' Virtual display :99 started' && \
-    curl -I https://google.com && \
-    celery -A app.celery_app worker --loglevel=info --concurrency=2 & \
+    celery -A app.celery_app worker --loglevel=info & \
     celery -A app.celery_app beat --loglevel=info & \
     uvicorn app.dummy:app --host 0.0.0.0 --port 8080"

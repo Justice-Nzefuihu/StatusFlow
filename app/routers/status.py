@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from ..schemas import Status, StatusCreate, StatusUpdate
 from ..database import get_db
 from ..model import StatusDB, UserDB, ScheduleEnum
-from ..tasks import upload_media, delete_media, download_media
+from ..tasks import upload_media, delete_media, download_media_logic
 from app.middlewares import get_rate_limit
 
 import os
@@ -191,8 +191,8 @@ def get_statuses(phone_number: str, db: Annotated[Session, Depends(get_db)]):
 
         media_dir = os.path.join(BASE_DIR, str(user_id), "media")
         if not os.path.exists(media_dir) or not os.listdir(media_dir):
-            download_media.delay(str(BASE_DIR), str(user_id))
             logger.info(f"Triggered media download for user {user_id}")
+            download_media_logic(str(BASE_DIR), str(user_id))
 
         logger.info(f"Retrieved {len(statuses)} statuses for user {user_id}")
         return statuses

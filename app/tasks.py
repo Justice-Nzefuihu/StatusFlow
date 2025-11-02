@@ -324,9 +324,13 @@ def delete_media(self, media_file, user_id):
 
         items = list_files_in_folder(user.main_folder_id)
         media_folder_id = None
+
         for item in items:
-            if item["mimeType"] == "application/vnd.google-apps.folder" and item["name"] == "media":
-                media_folder_id = item["id"]
+            if (
+                item.get("mimeType") == "application/vnd.google-apps.folder"
+                and item.get("name") == "media"
+            ):
+                media_folder_id = item.get("id")
                 break
 
         if not media_folder_id:
@@ -344,8 +348,7 @@ def delete_media(self, media_file, user_id):
     finally:
         db.close()
 
-@celery_app.task(bind=True, max_retries=3)
-def download_media(self, BASE_DIR, user_id):
+def download_media_logic(BASE_DIR, user_id):
     db = sessionLocal()
     try:
         logger.info(f"Downloading media for user {user_id}")
@@ -353,10 +356,15 @@ def download_media(self, BASE_DIR, user_id):
 
         items = list_files_in_folder(user.main_folder_id)
         media_folder_id = None
+
         for item in items:
-            if item["mimeType"] == "application/vnd.google-apps.folder" and item["name"] == "media":
-                media_folder_id = item["id"]
+            if (
+                item.get("mimeType") == "application/vnd.google-apps.folder"
+                and item.get("name") == "media"
+            ):
+                media_folder_id = item.get("id")
                 break
+
 
         if not media_folder_id:
             media_folder = upload_folder("media", user.main_folder_id)
@@ -369,6 +377,23 @@ def download_media(self, BASE_DIR, user_id):
 
         download_folder(media_folder_id, MEDIA_DIR)
         logger.info("Media downloaded successfully")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Error in download_media: {e}", exc_info=True)
+        return False
+    finally:
+        db.close()
+
+@celery_app.task(bind=True, max_retries=3)
+def download_media(self, BASE_DIR, user_id):
+    db = sessionLocal()
+    try:
+        result = download_media_logic(BASE_DIR, user_id)
+        if not result:
+            raise Exception("Media download failed")
+        return True
     except Exception as e:
         logger.error(f"Error in download_media: {e}", exc_info=True)
         self.retry(exc=e, countdown=30)
