@@ -28,65 +28,34 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
     apt-get update && apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# ---------- Install Python Dependencies ----------
+# ---------- Copy Files ----------
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
-# ---------- Display Environment ----------
+# ---------- Virtual Display + Xauthority Setup ----------
 ENV DISPLAY=:99
 ENV XAUTHORITY=/root/.Xauthority
 ENV PYTHONUNBUFFERED=1
+
+# Create valid Xauthority cookie for Xvfb :99
+RUN Xvfb :99 -screen 0 1280x720x24 & \
+    sleep 2 && \
+    xauth add :99 . $(mcookie) && \
+    pkill Xvfb
+
+EXPOSE 8080
+
+# This environment variable disables the root warning safely
 ENV C_FORCE_ROOT=true
 
 # ---------- CMD ----------
-# Fix stale Xvfb lock files → start Xvfb → launch app
+# Start Xvfb first → set DISPLAY → then run Celery and FastAPI
 CMD bash -c "\
-    echo '🔧 Cleaning stale Xvfb locks...' && \
-    rm -f /tmp/.X99-lock && \
-    rm -f /tmp/.X11-unix/X99 || true && \
-    pkill Xvfb || true && \
-    sleep 1 && \
-
-    echo 'Checking network availability...' && \
-    COUNTER=0; \
-    until curl -s https://www.google.com > /dev/null; do \
-        echo 'Network unavailable... retrying'; \
-        COUNTER=$((COUNTER+1)); \
-        if [ $COUNTER -ge 10 ]; then \
-            echo 'Network failed after 10 attempts.'; \
-            exit 1; \
-        fi; \
-        sleep 3; \
-    done && \
-    echo 'Network is OK' && \
-
-    echo 'Checking Google Chrome installation...' && \
-    if ! command -v google-chrome > /dev/null; then \
-        echo 'Google Chrome NOT FOUND! Exiting...'; \
-        exit 1; \
-    else \
-        echo 'Google Chrome found:' $(google-chrome --version); \
-    fi && \
-
-    echo 'Checking Chromedriver installation...' && \
-    if ! [ -x \"$(command -v chromedriver 2>/dev/null)\" ]; then \
-        echo 'Chromedriver NOT FOUND! Selenium will fail.'; \
-    else \
-        echo 'Chromedriver found:' $(chromedriver --version); \
-    fi && \
-
-    echo 'Starting Xvfb on :99...' && \
     Xvfb :99 -screen 0 1280x720x24 & \
+    export DISPLAY=:99 && \
     sleep 2 && \
-    echo 'Virtual display ready (DISPLAY=:99)' && \
-
-    echo 'Starting Celery worker...' && \
+    echo ' Virtual display :99 started' && \
     celery -A app.celery_app worker --loglevel=info & \
-
-    echo 'Starting Celery beat...' && \
     celery -A app.celery_app beat --loglevel=info & \
-
-    echo 'Starting Uvicorn...' && \
-    uvicorn app.dummy:app --host 0.0.0.0 --port 8080 \
-"
+    uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
