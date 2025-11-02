@@ -7,11 +7,12 @@ from app.logging_config import get_logger
 logger = get_logger(__name__)
 
 try:
-    import pyautogui
     import requests
 
     response = requests.get("https://google.com")
     logger.info(f"Google Response: {response}")
+    
+    import pyautogui
     
     pos = pyautogui.position()
     logger.info(f"PyAutoGUI active! Mouse position: {pos}")

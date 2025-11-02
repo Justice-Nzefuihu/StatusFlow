@@ -19,6 +19,12 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# ----------------------------------------
+# Set Timezone → Africa/Lagos
+# ----------------------------------------
+RUN ln -fs /usr/share/zoneinfo/Africa/Lagos /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
     
 # ---------- Copy Files ----------
 COPY . .
