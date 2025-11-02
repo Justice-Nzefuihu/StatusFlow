@@ -74,4 +74,4 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Start supervisord
 # Render only sees ONE process running → stable
 # ----------------------------------------
-CMD ["/usr/bin/supervisord", "-n"]
+CMD ["/usr/bin/supervisord", "-c", "/app/supervisord.conf"]
