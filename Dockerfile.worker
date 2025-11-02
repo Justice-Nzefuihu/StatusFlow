@@ -1,65 +1,95 @@
-# ---------------- Base Image ---------------- #
+# ----------------------------------------
+# Base Image
+# ----------------------------------------
 FROM python:3.11-slim
 
-# ---------------- Environment Fixes ---------------- #
-ENV PYTHONUNBUFFERED=1
-ENV DISPLAY=:99
-ENV XAUTHORITY=/root/.Xauthority
-ENV PIP_ROOT_USER_ACTION=ignore
-
-# ---------------- Working Directory ---------------- #
+# ----------------------------------------
+# Working Directory
+# ----------------------------------------
 WORKDIR /app
 
-# ---------------- System Dependencies ---------------- #
+# ----------------------------------------
+# Create Non-Root User (Fix Celery Warning)
+# ----------------------------------------
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# ----------------------------------------
+# System Dependencies
+# ----------------------------------------
 RUN apt-get update && apt-get install -y \
     xvfb \
     xauth \
-    python3-tk python3-dev \ 
+    x11-xserver-utils \
+    x11-utils \
+    libgbm-dev \
+    libnss3 \
+    libasound2 \
+    libxss1 \
+    libxkbcommon-x11-0 \
+    python3-tk python3-dev \
+    scrot \
     wget \
     gnupg \
-    libnss3 \
-    libxss1 \
-    libgbm-dev \
-    libxkbcommon-x11-0 \
     fonts-liberation \
-    libasound2 \
     xdg-utils \
-    scrot \
-    x11-utils \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# ---------------- Install Google Chrome ---------------- #
+# ----------------------------------------
+# Set Timezone → Africa/Lagos
+# ----------------------------------------
+RUN ln -fs /usr/share/zoneinfo/Africa/Lagos /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+# ----------------------------------------
+# Install Google Chrome
+# ----------------------------------------
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
-    | gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] \
+    | gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] \
     http://dl.google.com/linux/chrome/deb/ stable main" \
-    > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+    > /etc/apt/sources.list.d/google-chrome.list && \
+    apt-get update && apt-get install -y google-chrome-stable && \
+    rm -rf /var/lib/apt/lists/*
 
-# ---------------- Install Python Dependencies ---------------- #
+# ----------------------------------------
+# Python Dependencies
+# ----------------------------------------
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ---------------- Copy App ---------------- #
+# ----------------------------------------
+# App Files
+# ----------------------------------------
 COPY . /app
+RUN chown -R appuser:appgroup /app
 
-# ---------------- Pre-Create Xauthority Cookie ---------------- #
-RUN Xvfb :99 -screen 0 1280x720x24 & \
-    sleep 2 && \
-    xauth add :99 . $(mcookie) && \
-    pkill Xvfb
+# ----------------------------------------
+# Switch to Non-Root User
+# ----------------------------------------
+USER appuser
 
-# ---------------- Expose Port ---------------- #
+# ----------------------------------------
+# Xvfb Virtual Display Config
+# ----------------------------------------
+ENV DISPLAY=:99
+ENV XAUTHORITY=/home/appuser/.Xauthority
+ENV PYTHONUNBUFFERED=1
+
+# ----------------------------------------
+# Expose Render Port
+# ----------------------------------------
 EXPOSE 8080
 
-# ---------------- CMD Startup Script ---------------- #
+# ----------------------------------------
+# Start Automation + Celery + API
+# ----------------------------------------
 CMD bash -c "\
-    rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && \
+    rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
     Xvfb :99 -screen 0 1280x720x24 & \
-    export DISPLAY=:99 && \
-    sleep 2 && \
-    echo '✅ Virtual display :99 started' && \
+    sleep 2 ; \
+    echo '[ OK ] Virtual display started on :99' ; \
     celery -A app.celery_app worker --loglevel=info & \
     celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
-    uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
+    uvicorn app.dummy:app --host 0.0.0.0 --port 8080 \
+"
