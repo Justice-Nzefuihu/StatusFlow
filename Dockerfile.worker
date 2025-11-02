@@ -46,16 +46,14 @@ RUN Xvfb :99 -screen 0 1280x720x24 & \
 
 EXPOSE 8080
 
-# This environment variable disables the root warning safely
-ENV C_FORCE_ROOT=true
-
 # ---------- CMD ----------
 # Start Xvfb first → set DISPLAY → then run Celery and FastAPI
 CMD bash -c "\
+    rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && \
     Xvfb :99 -screen 0 1280x720x24 & \
     export DISPLAY=:99 && \
     sleep 2 && \
-    echo ' Virtual display :99 started' && \
-    celery -A app.celery_app worker --loglevel=info & \
-    celery -A app.celery_app beat --loglevel=info & \
+    echo 'Virtual display :99 started' && \
+    celery -A app.celery_app worker --loglevel=info --uid=nobody --gid=nogroup & \
+    celery -A app.celery_app beat --loglevel=info --uid=nobody --gid=nogroup & \
     uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
