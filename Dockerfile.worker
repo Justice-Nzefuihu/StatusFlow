@@ -55,5 +55,5 @@ CMD bash -c "\
     sleep 2 && \
     echo 'Virtual display :99 started' && \
     celery -A app.celery_app worker --loglevel=info --uid=nobody --gid=nogroup & \
-    celery -A app.celery_app beat --loglevel=info --uid=nobody --gid=nogroup & \
+    celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
     uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
