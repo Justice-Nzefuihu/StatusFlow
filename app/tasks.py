@@ -448,3 +448,6 @@ def send_error_email(self, subject: str, message: str):
     except Exception as e:
         logger.error(f"Error sending email: {e}")
         raise self.retry(exc=e, countdown=30)
+    
+logger.info("First email initiated")
+send_error_email.delay("StatusFlow", "It has been deployed")
