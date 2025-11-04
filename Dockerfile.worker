@@ -6,12 +6,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # ----------------------------------------
-# Install system dependencies
+# System Dependencies
 # ----------------------------------------
 RUN apt-get update && apt-get install -y \
     xvfb \
     xauth \
-    supervisor \
     x11-xserver-utils \
     x11-utils \
     libgbm-dev \
@@ -35,7 +34,7 @@ RUN ln -fs /usr/share/zoneinfo/Africa/Lagos /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
 # ----------------------------------------
-# Install Google Chrome
+# Install Chrome
 # ----------------------------------------
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
     | gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg && \
@@ -54,9 +53,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # ----------------------------------------
-# Create non-root user
+# Create non-root user + FIX XAUTHORITY
 # ----------------------------------------
-RUN groupadd -r appgroup && useradd -m -r -g appgroup appuser && \
+RUN groupadd -r appgroup && \
+    useradd -m -r -g appgroup appuser && \
+    mkdir -p /home/appuser && \
+    touch /home/appuser/.Xauthority && \
+    chown -R appuser:appgroup /home/appuser && \
     chown -R appuser:appgroup /app
 
 ENV DISPLAY=:99
@@ -66,12 +69,15 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # ----------------------------------------
-# Copy supervisor config
+# CMD: Start Xvfb → create cookie → switch user
 # ----------------------------------------
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# ----------------------------------------
-# Start supervisord
-# Render only sees ONE process running → stable
-# ----------------------------------------
-CMD ["/usr/bin/supervisord", "-c", "/app/supervisord.conf"]
+CMD bash -c "\
+    rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
+    Xvfb :99 -screen 0 1280x720x24 & \
+    sleep 2 ; \
+    su appuser -c 'xauth add :99 . $(mcookie)' ; \
+    echo '[ OK ] Virtual display started' ; \
+    su appuser -c 'celery -A app.celery_app worker --loglevel=info' & \
+    su appuser -c 'celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
+    su appuser -c 'uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
+"
