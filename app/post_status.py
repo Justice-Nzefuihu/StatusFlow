@@ -12,7 +12,7 @@ try:
     response = requests.get("https://google.com")
     logger.info(f"Google Response: {response}")
 
-    from tasks import send_error_email
+    from .tasks import send_error_email
 
     send_error_email.delay("StatusFlow", "It has been deployed")
     
