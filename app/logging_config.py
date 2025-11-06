@@ -17,6 +17,8 @@ class CeleryEmailHandler(logging.Handler):
             message = self.format(record)
 
             # Queue async Celery task
+            from app.tasks import send_error_email
+            
             send_error_email.delay(subject, message)
 
         except Exception as e:
