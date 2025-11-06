@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     verify_token: str
     app_secret: str
     google_scopes: str
-    credentials_file: str
     token_file: str
     fernet_key: str
 
