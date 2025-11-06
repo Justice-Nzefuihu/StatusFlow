@@ -50,7 +50,7 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app
+COPY . .
 
 # ----------------------------------------
 # Create non-root user + FIX XAUTHORITY

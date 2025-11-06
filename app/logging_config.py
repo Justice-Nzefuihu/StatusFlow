@@ -10,8 +10,6 @@ class CeleryEmailHandler(logging.Handler):
 
     def emit(self, record):
 
-        from app.tasks import send_error_email
-
         try:
             subject = f"[ERROR LOG] {record.levelname} in {record.module}"
             message = self.format(record)

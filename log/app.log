@@ -1,0 +1,28 @@
+[2025-11-06 19:04:08,980] [ERROR] [app_logger.__main__] Failed to authenticate with Google Drive: [Errno 13] Permission denied: 'app/secure/google_credentials.json'
+[2025-11-06 19:04:16,631] [INFO] [app_logger.app.celery_app] Celery app initialized successfully
+[2025-11-06 19:04:16,636] [INFO] [app_logger.app.celery_app] Celery configuration and beat schedule set successfully
+[2025-11-06 19:04:16,641] [INFO] [app_logger.app.celery_app] Celery autodiscover tasks executed successfully
+[2025-11-06 19:04:22,281] [INFO] [app_logger.app.post_status] Google Response: <Response [200]>
+[2025-11-06 19:04:23,558] [INFO] [app_logger.app.post_status] PyAutoGUI active! Mouse position: Point(x=1262, y=59)
+[2025-11-06 19:04:29,277] [INFO] [app_logger.app.database] Database engine created successfully
+[2025-11-06 19:04:29,278] [INFO] [app_logger.app.database] SessionLocal created successfully
+[2025-11-06 19:04:31,122] [INFO] [app_logger.app.crypto] Fernet cipher initialized successfully
+[2025-11-06 19:04:31,127] [ERROR] [app_logger.app.gdrive] Failed to authenticate with Google Drive: [Errno 13] Permission denied: 'app/secure/google_credentials.json'
+[2025-11-06 19:07:44,886] [INFO] [app_logger.__main__] New login via OAuth flow
+[2025-11-06 19:07:44,888] [INFO] [app_logger.__main__] Saved refreshed credentials
+[2025-11-06 19:07:44,898] [INFO] [app_logger.__main__] Google is working
+[2025-11-06 19:07:44,972] [INFO] [app_logger.__main__] Drive Test: Service initialized successfully
+[2025-11-06 19:07:47,763] [INFO] [app_logger.__main__] ✅ Drive Test: Root files: [{'id': '1WX478_nbM7yXNCPRdUhkNXTyWR_bUPSu', 'name': '20230321_153616.jpg.enc'}, {'id': '1yasMHxIliCpSCdf0kU_gtzdf4g-Jra_M', 'name': 'Screenshot 2024-05-02 154102.png.enc'}, {'id': '18-YgTMQM3OnqbgjBM1fX6BOYHxNWAjrd', 'name': 'room1.jpg.enc'}, {'id': '1TIefkPLy1Jvza_2UgbGPSATGxrMkGIcF', 'name': 'gallery1.jpg.enc'}, {'id': '12sUqBQfTAql1kF4423Z6ALNeQhNDdwi8', 'name': 'gallery1_qHAV7cd.jpg.enc'}]
+[2025-11-06 19:07:49,765] [INFO] [app_logger.__main__] ✅ Drive Test: Uploaded file -> {'id': '1rpr2xGhIwAUHHPKzbfLZ_duxmNlWQR44', 'name': 'statusflow_test.txt'}
+[2025-11-06 19:16:04,250] [INFO] [app_logger.__main__] Google is working
+[2025-11-06 19:16:04,257] [INFO] [app_logger.__main__] Drive Test: Service initialized successfully
+[2025-11-06 19:16:06,969] [INFO] [app_logger.__main__] ✅ Drive Test: Root files: [{'id': '1rpr2xGhIwAUHHPKzbfLZ_duxmNlWQR44', 'name': 'statusflow_test.txt'}, {'id': '1WX478_nbM7yXNCPRdUhkNXTyWR_bUPSu', 'name': '20230321_153616.jpg.enc'}, {'id': '1yasMHxIliCpSCdf0kU_gtzdf4g-Jra_M', 'name': 'Screenshot 2024-05-02 154102.png.enc'}, {'id': '18-YgTMQM3OnqbgjBM1fX6BOYHxNWAjrd', 'name': 'room1.jpg.enc'}, {'id': '1TIefkPLy1Jvza_2UgbGPSATGxrMkGIcF', 'name': 'gallery1.jpg.enc'}]
+[2025-11-06 19:16:08,701] [INFO] [app_logger.__main__] ✅ Drive Test: Uploaded file -> {'id': '1tTdcll8H7OjjnJkhmTEjRw5WdxiyCN3u', 'name': 'statusflow_test.txt'}
+[2025-11-06 19:16:54,512] [INFO] [app_logger.__main__] Google is working
+[2025-11-06 19:16:54,517] [INFO] [app_logger.__main__] Drive Test: Service initialized successfully
+[2025-11-06 19:16:57,209] [INFO] [app_logger.__main__] ✅ Drive Test: Root files: [{'id': '1tTdcll8H7OjjnJkhmTEjRw5WdxiyCN3u', 'name': 'statusflow_test.txt'}, {'id': '1rpr2xGhIwAUHHPKzbfLZ_duxmNlWQR44', 'name': 'statusflow_test.txt'}, {'id': '1WX478_nbM7yXNCPRdUhkNXTyWR_bUPSu', 'name': '20230321_153616.jpg.enc'}, {'id': '1yasMHxIliCpSCdf0kU_gtzdf4g-Jra_M', 'name': 'Screenshot 2024-05-02 154102.png.enc'}, {'id': '18-YgTMQM3OnqbgjBM1fX6BOYHxNWAjrd', 'name': 'room1.jpg.enc'}]
+[2025-11-06 19:16:58,892] [INFO] [app_logger.__main__] ✅ Drive Test: Uploaded file -> {'id': '1TI4RMuhqEABZE2OjdOchVMME-_N31F_a', 'name': 'statusflow_test.txt'}
+[2025-11-06 19:17:49,470] [INFO] [app_logger.__main__] Google is working
+[2025-11-06 19:17:49,477] [INFO] [app_logger.__main__] Drive Test: Service initialized successfully
+[2025-11-06 19:17:52,168] [INFO] [app_logger.__main__] ✅ Drive Test: Root files: [{'id': '1TI4RMuhqEABZE2OjdOchVMME-_N31F_a', 'name': 'statusflow_test.txt'}, {'id': '1tTdcll8H7OjjnJkhmTEjRw5WdxiyCN3u', 'name': 'statusflow_test.txt'}, {'id': '1rpr2xGhIwAUHHPKzbfLZ_duxmNlWQR44', 'name': 'statusflow_test.txt'}, {'id': '1WX478_nbM7yXNCPRdUhkNXTyWR_bUPSu', 'name': '20230321_153616.jpg.enc'}, {'id': '1yasMHxIliCpSCdf0kU_gtzdf4g-Jra_M', 'name': 'Screenshot 2024-05-02 154102.png.enc'}]
+[2025-11-06 19:17:53,825] [INFO] [app_logger.__main__] ✅ Drive Test: Uploaded file -> {'id': '1uLKoxYrYarUfXfbTJhLfvcQSw_ellMrW', 'name': 'statusflow_test.txt'}

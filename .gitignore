@@ -4,9 +4,11 @@ __pycache__
 profiles/
 media/
 justice/
+google_credentials.json
 credentials.json
 secret/
 token.json
 token.file
 test.py
 test.html
+service_account.json

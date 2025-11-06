@@ -27,6 +27,7 @@ SCOPES = [setting.google_scopes]
 
 # Prefer persistent directory if available
 VOLUME_PATH = os.environ.get("VOLUME_PATH", tempfile.gettempdir())
+os.makedirs(VOLUME_PATH, exist_ok=True)
 
 CREDENTIALS_FILE = f"{VOLUME_PATH}/google_credentials.json"
 
@@ -36,7 +37,13 @@ if google_json and not os.path.exists(CREDENTIALS_FILE):
     with open(CREDENTIALS_FILE, "w") as f:
         f.write(google_json)
 
-TOKEN_FILE = setting.token_file
+TOKEN_FILE = f"{VOLUME_PATH}/token.file"
+
+token_json = os.environ.get("GOOGLE_TOKEN")
+
+if token_json and not os.path.exists(TOKEN_FILE):
+    with open(TOKEN_FILE, "w") as f:
+        f.write(token_json)
 
 # Threshold for simple vs resumable upload (5MB)
 UPLOAD_THRESHOLD = 10 * 1024 * 1024
