@@ -25,6 +25,7 @@ class UserDB(Base):
         default=func.now()
     )
     login_status: Mapped[bool] = mapped_column(default=False)
+    link_code: Mapped[str] = mapped_column(String(9), nullable=True, default="")
     main_folder_id: Mapped[ str | None] = mapped_column(String(50), unique=True, nullable=True)
     sequence: Mapped[int] = mapped_column(default=0, nullable=True)
     statuses: Mapped[List["StatusDB"]] = relationship(

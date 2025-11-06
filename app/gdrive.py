@@ -1,4 +1,5 @@
 import os
+import tempfile
 import mimetypes
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -23,7 +24,18 @@ logger = get_logger(__name__)
 
 # ---------------- Config ----------------
 SCOPES = [setting.google_scopes]
-CREDENTIALS_FILE = setting.credentials_file
+
+# Prefer persistent directory if available
+VOLUME_PATH = os.environ.get("VOLUME_PATH", tempfile.gettempdir())
+
+CREDENTIALS_FILE = f"{VOLUME_PATH}/google_credentials.json"
+
+google_json = os.environ.get("GOOGLE_CREDENTIALS")
+
+if google_json and not os.path.exists(CREDENTIALS_FILE):
+    with open(CREDENTIALS_FILE, "w") as f:
+        f.write(google_json)
+
 TOKEN_FILE = setting.token_file
 
 # Threshold for simple vs resumable upload (5MB)
@@ -62,6 +74,9 @@ def get_drive_service():
     except Exception as e:
         logger.error(f"Failed to authenticate with Google Drive: {e}")
         raise
+
+if get_drive_service():
+    logger.info("Google is working")
 
 
 # ---------------- Upload ----------------

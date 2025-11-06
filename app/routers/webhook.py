@@ -4,6 +4,7 @@ import hmac
 import hashlib
 from ..config import setting
 from app.middlewares import get_rate_limit
+from ..send_mssg import first_message, wow_flow_mssg, registration_flow_mssg
 
 # Configure logger
 from app.logging_config import get_logger
@@ -63,11 +64,27 @@ async def receive_webhook(request: Request):
             for entry in data["entry"]:
                 for change in entry.get("changes", []):
                     value = change.get("value", {})
+                    contacts = value.get("contacts", [])
                     messages = value.get("messages", [])
-                    if messages:
-                        for msg in messages:
+                    if len(contacts) == len(messages) and contacts:
+                        for index in len(contacts):
+                            contact = contacts[index]
+                            username = contact["profile"]["name"]
+
+                            msg = messages[index]
                             phone_number = msg.get("from")
-                            logger.info(f"Message received from {phone_number}.")
+                            logger.info(f"Message received from {username} ({phone_number}).")
+
+                            text = msg.get("text", {})
+                            body = text.get("body", "")
+
+                            if body == "STATUSFLOW":
+                                first_message(phone_number, username)
+                            elif body == "register":
+                                registration_flow_mssg(phone_number)
+                            elif body == "Done":
+                                wow_flow_mssg(phone_number)
+
 
         return JSONResponse(content={"status": "received"}, status_code=200)
 

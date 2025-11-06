@@ -96,8 +96,8 @@ def get_code(wait, browser, phone_number: str, country: str):
             except TimeoutException:
                 logger.debug("Link code not yet available for %s (%s)", phone_number, country)
 
-            # Check if login is confirmed
-            if get_login_status(phone_number, country):
+            # Check if login is confirmed and send verification mssg
+            if get_login_status(phone_number, country, link_code):
                 logger.info("Login confirmed for %s (%s)", phone_number, country)
                 break
 
