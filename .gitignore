@@ -12,3 +12,4 @@ token.file
 test.py
 test.html
 service_account.json
+app.log
