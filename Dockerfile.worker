@@ -64,8 +64,8 @@ CMD bash -c "\
     sleep 2 ; \
     su appuser -c 'xauth -f /home/appuser/.Xauthority add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    su appuser -c 'export DISPLAY=:99 && celery -A app.celery_app worker --loglevel=info' & \
-    su appuser -c 'export DISPLAY=:99 && celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
-    su appuser -c 'export DISPLAY=:99 && uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
+    'export DISPLAY=:99 && celery -A app.celery_app worker --loglevel=info' & \
+    'export DISPLAY=:99 && celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
+    'export DISPLAY=:99 && uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
 "
 
