@@ -18,11 +18,11 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libasound2 \
     tzdata \
-    wget \
     python3-tk \
-    tk \
-    tcl \
     python3-dev \
+    tcl \
+    tk \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------
@@ -44,12 +44,17 @@ COPY . .
 # ---------------------------
 RUN groupadd -r appgroup && \
     useradd -m -r -g appgroup appuser && \
-    touch /home/appuser/.Xauthority && \
     chown -R appuser:appgroup /app
 
+# ---------------------------
+# FIX XAUTHORITY PERMISSIONS
+# ---------------------------
+RUN touch /home/appuser/.Xauthority && \
+    chown appuser:appgroup /home/appuser/.Xauthority
+
 ENV DISPLAY=:99
-ENV CHROME_BIN=/usr/bin/chromium
 ENV XAUTHORITY=/home/appuser/.Xauthority
+ENV CHROME_BIN=/usr/bin/chromium
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
@@ -63,6 +68,6 @@ CMD bash -c "\
     sleep 2 ; \
     su appuser -c 'xauth add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    celery -A app.celery_app worker --loglevel=info --uid=root & \
+    celery -A app.celery_app worker --loglevel=info --uid=nobody --gid=nogroup & \
     celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
     uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
