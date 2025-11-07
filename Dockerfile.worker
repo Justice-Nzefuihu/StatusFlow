@@ -46,11 +46,15 @@ RUN groupadd -r appgroup && \
     useradd -m -r -g appgroup appuser && \
     chown -R appuser:appgroup /app
 
-# ---------------------------
-# FIX XAUTHORITY PERMISSIONS
-# ---------------------------
-RUN touch /home/appuser/.Xauthority && \
-    chown appuser:appgroup /home/appuser/.Xauthority
+# ----------------------------------------
+# Create non-root user + FIX XAUTHORITY PERMISSIONS
+# ----------------------------------------
+RUN groupadd -r appgroup && \
+    useradd -m -r -g appgroup appuser && \
+    mkdir -p /home/appuser && \
+    touch /home/appuser/.Xauthority && \
+    chown -R appuser:appgroup /home/appuser
+
 
 ENV DISPLAY=:99
 ENV XAUTHORITY=/home/appuser/.Xauthority
@@ -66,8 +70,10 @@ CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
     Xvfb :99 -screen 0 1280x720x24 & \
     sleep 2 ; \
-    su appuser -c 'xauth add :99 . $(mcookie)' ; \
+    su appuser -c 'xauth -f /home/appuser/.Xauthority add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    celery -A app.celery_app worker --loglevel=info --uid=nobody --gid=nogroup & \
-    celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
-    uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
+    su appuser -c 'export DISPLAY=:99 && celery -A app.celery_app worker --loglevel=info' & \
+    su appuser -c 'export DISPLAY=:99 && celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
+    su appuser -c 'export DISPLAY=:99 && uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
+"
+
