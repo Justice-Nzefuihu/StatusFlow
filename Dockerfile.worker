@@ -44,10 +44,12 @@ COPY . .
 # ---------------------------
 RUN groupadd -r appgroup && \
     useradd -m -r -g appgroup appuser && \
+    touch /home/appuser/.Xauthority && \
     chown -R appuser:appgroup /app
 
 ENV DISPLAY=:99
 ENV CHROME_BIN=/usr/bin/chromium
+ENV XAUTHORITY=/home/appuser/.Xauthority
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
@@ -61,6 +63,6 @@ CMD bash -c "\
     sleep 2 ; \
     su appuser -c 'xauth add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    celery -A app.celery_app worker --loglevel=info & \
+    celery -A app.celery_app worker --loglevel=info --uid=root & \
     celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
     uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
