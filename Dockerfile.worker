@@ -40,21 +40,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # ---------------------------
-# NON ROOT USER
+# NON ROOT USER + XAUTHORITY
 # ---------------------------
-RUN groupadd -r appgroup && \
-    useradd -m -r -g appgroup appuser && \
-    chown -R appuser:appgroup /app
-
-# ----------------------------------------
-# Create non-root user + FIX XAUTHORITY PERMISSIONS
-# ----------------------------------------
 RUN groupadd -r appgroup && \
     useradd -m -r -g appgroup appuser && \
     mkdir -p /home/appuser && \
     touch /home/appuser/.Xauthority && \
-    chown -R appuser:appgroup /home/appuser
-
+    chown -R appuser:appgroup /home/appuser /app
 
 ENV DISPLAY=:99
 ENV XAUTHORITY=/home/appuser/.Xauthority
