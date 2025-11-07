@@ -60,12 +60,10 @@ EXPOSE 8080
 # ---------------------------
 CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
-    Xvfb :99 -screen 0 1280x720x24 & \
-    sleep 2 ; \
-    su appuser -c 'xauth -f /home/appuser/.Xauthority add :99 . $(mcookie)' ; \
-    echo '[ OK ] Virtual display started' ; \
-    export DISPLAY=:99 && celery -A app.celery_app worker --loglevel=info & \
-    export DISPLAY=:99 && celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule'\ & \
-    export DISPLAY=:99 && uvicorn app.dummy:app --host 0.0.0.0 --port 8080 \
+    Xvfb :99 -screen 0 1280x720x24 & sleep 2 ; \
+    su appuser -c 'xauth add :99 . $(mcookie)' ; \
+    DISPLAY=:99 celery -A app.celery_app worker --loglevel=info & \
+    DISPLAY=:99 celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
+    DISPLAY=:99 uvicorn app.dummy:app --host 0.0.0.0 --port 8080 \
 "
 
