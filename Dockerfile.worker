@@ -1,15 +1,16 @@
 # ---------------------------
-# BASE IMAGE
+# BASE (SMALL & CLEAN)
 # ---------------------------
 FROM python:3.11-slim
 
 WORKDIR /app
 
 # ---------------------------
-# INSTALL SYSTEM DEPENDENCIES
+# INSTALL SYSTEM PACKAGES
 # ---------------------------
 RUN apt-get update && apt-get install -y \
     chromium \
+    chromium-driver \
     xvfb \
     xauth \
     libnss3 \
@@ -20,8 +21,6 @@ RUN apt-get update && apt-get install -y \
     tzdata \
     python3-tk \
     python3-dev \
-    tcl \
-    tk \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
@@ -32,7 +31,7 @@ RUN ln -fs /usr/share/zoneinfo/Africa/Lagos /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
 # ---------------------------
-# PYTHON REQUIREMENTS
+# INSTALL REQUIREMENTS
 # ---------------------------
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -40,17 +39,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # ---------------------------
-# NON ROOT USER (ONE TIME)
+# CREATE NON-ROOT USER
 # ---------------------------
 RUN groupadd -r appgroup && \
-    useradd -m -r -g appgroup appuser
-
-# FIX PERMISSIONS
-RUN mkdir -p /home/appuser && \
+    useradd -m -r -g appgroup appuser && \
+    mkdir -p /home/appuser && \
     touch /home/appuser/.Xauthority && \
     chown -R appuser:appgroup /home/appuser && \
     chown -R appuser:appgroup /app
 
+# ---------------------------
+# ENVIRONMENT
+# ---------------------------
 ENV DISPLAY=:99
 ENV XAUTHORITY=/home/appuser/.Xauthority
 ENV CHROME_BIN=/usr/bin/chromium
@@ -59,9 +59,10 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # ---------------------------
-# ENTRYPOINT
+# START SUPERVISOR (CELERY + UVICORN + XVFB)
 # ---------------------------
 CMD bash -c "\
+    echo 'Cleaning old Xvfb locks...' ; \
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
     Xvfb :99 -screen 0 1280x720x24 & \
     sleep 2 ; \
@@ -72,6 +73,3 @@ CMD bash -c "\
     su appuser -c 'DISPLAY=:99 celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
     su appuser -c 'DISPLAY=:99 uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
 "
-
-
-
