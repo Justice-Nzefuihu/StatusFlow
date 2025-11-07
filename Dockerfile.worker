@@ -19,6 +19,10 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     tzdata \
     wget \
+    python3-tk \
+    tk \
+    tcl \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------
