@@ -61,7 +61,6 @@ CMD bash -c "\
     sleep 2 ; \
     su appuser -c 'xauth add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    su appuser -c 'celery -A app.celery_app worker --loglevel=info' & \
-    su appuser -c 'celery -A app.celery_app beat --loglevel=info' & \
-    su appuser -c 'uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
-"
+    celery -A app.celery_app worker --loglevel=info & \
+    celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
+    uvicorn app.dummy:app --host 0.0.0.0 --port 8080"
