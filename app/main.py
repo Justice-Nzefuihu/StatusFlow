@@ -8,17 +8,22 @@ from app.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def launch_whatsapp(PROFILES_DIR):
+def launch_whatsapp(PROFILES_DIR = None):
     """Launch WhatsApp Web with a specific Chrome user profile."""
     try:
         options = Options()
+        options.binary_location = "/usr/bin/chromium"
+
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
-        options.add_argument("--start-maximized")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--window-size=1280,720")
+        options.add_argument("--display=:99")
 
-        options.add_argument(f"--user-data-dir={PROFILES_DIR}")
-        options.add_argument("--profile-directory=Default")
+        if PROFILES_DIR:
+            options.add_argument(f"--user-data-dir={PROFILES_DIR}")
+            options.add_argument("--profile-directory=Default")
         
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)

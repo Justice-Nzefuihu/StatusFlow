@@ -1,31 +1,36 @@
 # ----------------------------------------
-# Base Image
+# Base (Slim) Image
 # ----------------------------------------
 FROM python:3.11-slim
+
+# Reduce space usage
+ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
 # ----------------------------------------
-# System Dependencies
+# Install ONLY necessary system dependencies
 # ----------------------------------------
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     xauth \
-    x11-xserver-utils \
     x11-utils \
-    libgbm-dev \
+    x11-xserver-utils \
     libnss3 \
-    libasound2 \
     libxss1 \
-    libxkbcommon-x11-0 \
-    python3-tk python3-dev \
+    libgbm1 \
+    libasound2 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libgtk-3-0 \
+    python3-tk \
+    python3-dev \
     scrot \
-    wget \
-    gnupg \
-    fonts-liberation \
-    xdg-utils \
+    chromium \
+    chromium-driver \
     tzdata \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ----------------------------------------
 # Timezone → Africa/Lagos
@@ -34,30 +39,24 @@ RUN ln -fs /usr/share/zoneinfo/Africa/Lagos /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
 # ----------------------------------------
-# Install Chrome
+# Create Python Virtual Env
 # ----------------------------------------
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
-    | gpg --dearmor -o /usr/share/keyrings/google-linux-keyring.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-keyring.gpg] \
-    http://dl.google.com/linux/chrome/deb/ stable main" \
-    > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # ----------------------------------------
-# Python requirements
+# Install Python Dependencies into VENV
 # ----------------------------------------
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN /opt/venv/bin/pip install -r requirements.txt
 
 COPY . .
 
 # ----------------------------------------
-# Create non-root user + FIX XAUTHORITY
+# Create non-root user + Fix Xauthority
 # ----------------------------------------
 RUN groupadd -r appgroup && \
     useradd -m -r -g appgroup appuser && \
-    mkdir -p /home/appuser && \
     touch /home/appuser/.Xauthority && \
     chown -R appuser:appgroup /home/appuser && \
     chown -R appuser:appgroup /app
@@ -65,11 +64,12 @@ RUN groupadd -r appgroup && \
 ENV DISPLAY=:99
 ENV XAUTHORITY=/home/appuser/.Xauthority
 ENV PYTHONUNBUFFERED=1
+ENV CHROME_BIN=/usr/bin/chromium
 
 EXPOSE 8080
 
 # ----------------------------------------
-# CMD: Start Xvfb → create cookie → switch user
+# CMD: Start Xvfb → xauth → start apps
 # ----------------------------------------
 CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
@@ -77,7 +77,11 @@ CMD bash -c "\
     sleep 2 ; \
     su appuser -c 'xauth add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    su appuser -c 'celery -A app.celery_app worker --loglevel=info' & \
-    su appuser -c 'celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
-    su appuser -c 'uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
+    echo 'Chromium located at: $(which chromium)' ; \
+    echo 'Version:' ; chromium --version ; \
+    echo 'Python version:' ; python --version ; \
+    echo 'Image Size:' ; du -sh / ; \
+    su appuser -c '/opt/venv/bin/celery -A app.celery_app worker --loglevel=info' & \
+    su appuser -c '/opt/venv/bin/celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
+    su appuser -c '/opt/venv/bin/uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
 "

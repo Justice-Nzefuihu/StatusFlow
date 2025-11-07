@@ -16,6 +16,14 @@ try:
     
     pos = pyautogui.position()
     logger.info(f"PyAutoGUI active! Mouse position: {pos}")
+
+    from .main import launch_whatsapp
+    
+    browser, _ = launch_whatsapp()
+    browser.get("https://web.whatsapp.com/")
+    logger.info(f"Browser title: {browser.title}")
+    browser.quit()
+
 except Exception as e:
     pyautogui = None
     logger.warning("PyAutoGUI disabled in headless environment: %s", e)
