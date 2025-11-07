@@ -1,87 +1,64 @@
-# ----------------------------------------
-# Base (Slim) Image
-# ----------------------------------------
+# ---------------------------
+# BASE IMAGE
+# ---------------------------
 FROM python:3.11-slim
-
-# Reduce space usage
-ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# ----------------------------------------
-# Install ONLY necessary system dependencies
-# ----------------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    xvfb \
-    xauth \
-    x11-utils \
-    x11-xserver-utils \
-    libnss3 \
-    libxss1 \
-    libgbm1 \
-    libasound2 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libgtk-3-0 \
-    python3-tk \
-    python3-dev \
-    scrot \
+# ---------------------------
+# INSTALL SYSTEM DEPENDENCIES
+# ---------------------------
+RUN apt-get update && apt-get install -y \
     chromium \
     chromium-driver \
+    xvfb \
+    xauth \
+    libnss3 \
+    libgconf-2-4 \
+    libxss1 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libasound2 \
     tzdata \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# ----------------------------------------
-# Timezone → Africa/Lagos
-# ----------------------------------------
+# ---------------------------
+# TIMEZONE
+# ---------------------------
 RUN ln -fs /usr/share/zoneinfo/Africa/Lagos /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
-# ----------------------------------------
-# Create Python Virtual Env
-# ----------------------------------------
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# ----------------------------------------
-# Install Python Dependencies into VENV
-# ----------------------------------------
+# ---------------------------
+# PYTHON REQUIREMENTS
+# ---------------------------
 COPY requirements.txt .
-RUN /opt/venv/bin/pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# ----------------------------------------
-# Create non-root user + Fix Xauthority
-# ----------------------------------------
+# ---------------------------
+# NON ROOT USER
+# ---------------------------
 RUN groupadd -r appgroup && \
     useradd -m -r -g appgroup appuser && \
-    touch /home/appuser/.Xauthority && \
-    chown -R appuser:appgroup /home/appuser && \
     chown -R appuser:appgroup /app
 
 ENV DISPLAY=:99
-ENV XAUTHORITY=/home/appuser/.Xauthority
-ENV PYTHONUNBUFFERED=1
 ENV CHROME_BIN=/usr/bin/chromium
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-# ----------------------------------------
-# CMD: Start Xvfb → xauth → start apps
-# ----------------------------------------
+# ---------------------------
+# ENTRYPOINT
+# ---------------------------
 CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
     Xvfb :99 -screen 0 1280x720x24 & \
     sleep 2 ; \
     su appuser -c 'xauth add :99 . $(mcookie)' ; \
     echo '[ OK ] Virtual display started' ; \
-    echo 'Chromium located at: $(which chromium)' ; \
-    echo 'Version:' ; chromium --version ; \
-    echo 'Python version:' ; python --version ; \
-    echo 'Image Size:' ; du -sh / ; \
-    su appuser -c '/opt/venv/bin/celery -A app.celery_app worker --loglevel=info' & \
-    su appuser -c '/opt/venv/bin/celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
-    su appuser -c '/opt/venv/bin/uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
+    su appuser -c 'celery -A app.celery_app worker --loglevel=info' & \
+    su appuser -c 'celery -A app.celery_app beat --loglevel=info' & \
+    su appuser -c 'uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
 "
