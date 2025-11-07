@@ -40,13 +40,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # ---------------------------
-# NON ROOT USER + XAUTHORITY
+# NON ROOT USER (ONE TIME)
 # ---------------------------
 RUN groupadd -r appgroup && \
-    useradd -m -r -g appgroup appuser && \
-    mkdir -p /home/appuser && \
+    useradd -m -r -g appgroup appuser
+
+# FIX PERMISSIONS
+RUN mkdir -p /home/appuser && \
     touch /home/appuser/.Xauthority && \
-    chown -R appuser:appgroup /home/appuser /app
+    chown -R appuser:appgroup /home/appuser && \
+    chown -R appuser:appgroup /app
 
 ENV DISPLAY=:99
 ENV XAUTHORITY=/home/appuser/.Xauthority
@@ -60,10 +63,12 @@ EXPOSE 8080
 # ---------------------------
 CMD bash -c "\
     rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 ; \
-    Xvfb :99 -screen 0 1280x720x24 & sleep 2 ; \
-    su appuser -c 'xauth add :99 . $(mcookie)' ; \
-    celery -A app.celery_app worker --loglevel=info & \
-    celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule & \
-    uvicorn app.dummy:app --host 0.0.0.0 --port 8080 \
+    Xvfb :99 -screen 0 1280x720x24 & \
+    sleep 2 ; \
+    su appuser -c 'xauth -f /home/appuser/.Xauthority add :99 . $(mcookie)' ; \
+    export DISPLAY=:99 ; \
+    su appuser -c 'celery -A app.celery_app worker --loglevel=info' & \
+    su appuser -c 'celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule' & \
+    su appuser -c 'uvicorn app.dummy:app --host 0.0.0.0 --port 8080' \
 "
 
