@@ -52,9 +52,9 @@ RUN groupadd -r appgroup && \
 # ENVIRONMENT
 # ---------------------------
 ENV DISPLAY=:99
-# ENV XAUTHORITY=/home/appuser/.Xauthority
+ENV XAUTHORITY=/home/appuser/.Xauthority
 ENV CHROME_BIN=/usr/bin/chromium
-# ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
