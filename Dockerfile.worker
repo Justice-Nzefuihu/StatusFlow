@@ -59,9 +59,13 @@ EXPOSE 8080
 # ENTRYPOINT
 # ---------------------------
 CMD bash -c "\
-    echo '[INFO] Starting Xvfb...' ; \
-    Xvfb :99 -screen 0 1280x720x24 & \
-    sleep 2 ; \
+    if pgrep Xvfb > /dev/null; then \
+        echo '[WARN] Xvfb already running, skipping...'; \
+    else \
+        echo '[INFO] Starting Xvfb...' ; \
+        Xvfb :99 -screen 0 1280x720x24 & \
+        sleep 2 ; \
+    fi ; \
     COOKIE=$(mcookie) ; \
     su appuser -c \"xauth add :99 . $COOKIE\" ; \
     echo '[ OK ] Xvfb + Xauthority Ready' ; \
